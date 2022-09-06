@@ -889,7 +889,6 @@ class CTABGANSynthesizer:
                     optimizerC.zero_grad()
                     classifier.train()
                     # computing classifier's target column predictions on the real data along with returning corresponding true labels
-                    print(train_data.shape, real.shape)
                     real_pre, real_label = classifier(real)
                     if (st_ed[1] - st_ed[0])==2:
                         real_label = real_label.type_as(real_pre)
@@ -914,10 +913,11 @@ class CTABGANSynthesizer:
                     loss_cg.backward()
                     optimizerG.step()
 
-                    # if iteration==steps_per_epoch-1:
+                    if iteration==steps_per_epoch-1:
+                        classifier.eval()
+                        eval_pre, eval_label = classifier(train_data)
+                        print(eval_pre.shape,eval_label.shape)
 
-
-                            
     def sample(self, n):
         
         # turning the generator into inference mode to effectively use running statistics in batch norm layers
