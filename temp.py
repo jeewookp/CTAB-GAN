@@ -16,7 +16,7 @@ categorical_columns = list(df_train.columns)
 
 synthesizer = CTABGANSynthesizer(epochs = epochs)
 data_prep = DataPrep(raw_df=df_train, categorical=categorical_columns, log=[], mixed={}, integer=[],
-                     type={"Classification": 'bad'}, test_ratio=0.)
+                     type={"Classification": 'bad'})
 
 
 synthesizer.fit(train_data=data_prep.df, categorical = data_prep.column_types["categorical"],

@@ -887,7 +887,9 @@ class CTABGANSynthesizer:
 
                     # updating the weights of the classifier
                     optimizerC.zero_grad()
+                    classifier.train()
                     # computing classifier's target column predictions on the real data along with returning corresponding true labels
+                    print(train_data.shape, real.shape)
                     real_pre, real_label = classifier(real)
                     if (st_ed[1] - st_ed[0])==2:
                         real_label = real_label.type_as(real_pre)
@@ -898,6 +900,7 @@ class CTABGANSynthesizer:
 
                     # updating the weights of the generator
                     optimizerG.zero_grad()
+                    classifier.eval()
                     # generate synthetic data and apply the final activation
                     fake = self.generator(noisez)
                     faket = self.Gtransformer.inverse_transform(fake)
@@ -910,6 +913,9 @@ class CTABGANSynthesizer:
                     loss_cg = c_loss(fake_pre, fake_label)
                     loss_cg.backward()
                     optimizerG.step()
+
+                    # if iteration==steps_per_epoch-1:
+
 
                             
     def sample(self, n):
