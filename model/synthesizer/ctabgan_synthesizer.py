@@ -754,7 +754,7 @@ class CTABGANSynthesizer:
                     sorted_indices = torch.argsort(output)
                     sorted_labels = Y_test[sorted_indices]
                     n_positives = torch.cumsum(sorted_labels, dim=0)
-                    n_negatives = torch.arange(1, n_positives.shape[0] + 1) - n_positives
+                    n_negatives = torch.arange(1, n_positives.shape[0] + 1,device=self.device) - n_positives
                     cum_pos_ratio = n_positives / n_positives[-1]
                     cum_neg_ratio = n_negatives / n_negatives[-1]
                     KS = torch.max(cum_pos_ratio - cum_neg_ratio)
