@@ -609,7 +609,7 @@ class CTABGANSynthesizer:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.generator = None
 
-    def fit(self, train_data=pd.DataFrame, categorical=[], mixed={}, type={}):
+    def fit(self, train_data=pd.DataFrame, eval_data=pd.DataFrame, categorical=[], mixed={}, type={}):
         
         # obtaining the column index of the target column used for ML tasks
         problem_type = None
@@ -625,6 +625,9 @@ class CTABGANSynthesizer:
         self.transformer = DataTransformer(train_data=train_data, categorical_list=categorical, mixed_dict=mixed)
         self.transformer.fit() 
         train_data = self.transformer.transform(train_data.values)
+        self.transformer_eval = DataTransformer(train_data=eval_data, categorical_list=categorical, mixed_dict=mixed)
+        self.transformer_eval.fit()
+        eval_data = self.transformer.transform(eval_data.values)
         # storing column size of the transformed training data
         data_dim = self.transformer.output_dim
         
@@ -915,8 +918,19 @@ class CTABGANSynthesizer:
 
                     if iteration==steps_per_epoch-1:
                         classifier.eval()
-                        eval_pre, eval_label = classifier(torch.from_numpy(train_data.astype('float32')).to(self.device))
+                        eval_pre, eval_label = classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
                         print(eval_pre.shape,eval_label.shape)
+                        # sorted_indices = torch.argsort(output)
+                        # sorted_labels = Y_test[sorted_indices]
+                        # n_positives = torch.cumsum(sorted_labels, dim=0)
+                        # n_negatives = torch.arange(1, n_positives.shape[0] + 1, device=self.device) - n_positives
+                        # cum_pos_ratio = n_positives / n_positives[-1]
+                        # cum_neg_ratio = n_negatives / n_negatives[-1]
+                        # KS = torch.max(cum_pos_ratio - cum_neg_ratio)
+                        # print(KS.item())
+                        # if best < KS.item():
+                        #     best = KS.item()
+                        #     print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
     def sample(self, n):
         

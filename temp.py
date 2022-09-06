@@ -10,16 +10,19 @@ import torch
 import numpy as np
 
 epochs = 150
+
+synthesizer = CTABGANSynthesizer(epochs = epochs)
 df_train = pd.read_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_dev.csv')
 df_train = df_train.drop(['dev_val', 'pk'], axis=1)
 categorical_columns = list(df_train.columns)
-
-synthesizer = CTABGANSynthesizer(epochs = epochs)
 data_prep = DataPrep(raw_df=df_train, categorical=categorical_columns, log=[], mixed={}, integer=[],
                      type={"Classification": 'bad'})
+df_eval = pd.read_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_val.csv')
+df_eval = df_eval.drop(['dev_val', 'pk'], axis=1)
+data_prep_eval = DataPrep(raw_df=df_eval, categorical=categorical_columns, log=[], mixed={}, integer=[],
+                     type={"Classification": 'bad'})
 
-
-synthesizer.fit(train_data=data_prep.df, categorical = data_prep.column_types["categorical"],
+synthesizer.fit(train_data=data_prep.df, eval_data=data_prep_eval.df, categorical = data_prep.column_types["categorical"],
         mixed = data_prep.column_types["mixed"],type={"Classification": 'bad'})
 
 sample = synthesizer.sample(len(df_train))
