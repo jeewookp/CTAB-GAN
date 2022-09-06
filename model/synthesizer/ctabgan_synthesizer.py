@@ -675,7 +675,7 @@ class CTABGANSynthesizer:
             st_ed= get_st_ed(target_index,self.transformer.output_info)
             # configuring the classifier network and it's optimizer accordingly 
             classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
-            optimizerC = optim.Adam(classifier.parameters(),**dict(lr=2e-4, betas=(0.5, 0.9), eps=1e-5, weight_decay=self.l2scale))
+            optimizerC = optim.Adam(classifier.parameters(),**dict(lr=1e-5, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale))
         
         # initializing learnable parameters of the discrimnator and generator networks  
         self.generator.apply(weights_init)
