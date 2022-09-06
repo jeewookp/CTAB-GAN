@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pandas as pd
 import torch
@@ -678,6 +680,7 @@ class CTABGANSynthesizer:
             st_ed= get_st_ed(target_index,self.transformer.output_info)
             # configuring the classifier network and it's optimizer accordingly 
             classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
+            classifier_save = copy.deepcopy(classifier)
             optimizerC = optim.Adam(classifier.parameters(),**optimizer_params)
         
         # initializing learnable parameters of the discrimnator and generator networks  
@@ -691,7 +694,8 @@ class CTABGANSynthesizer:
         # initiating the training by computing the number of iterations per epoch
         steps_per_epoch = max(1, len(train_data) // self.batch_size)
 
-        best = 0
+        best_real = 0
+        best_fake = 0
 
         for epoch in tqdm(range(self.epochs)):
 
@@ -762,8 +766,8 @@ class CTABGANSynthesizer:
                     cum_neg_ratio = n_negatives / n_negatives[-1]
                     KS = torch.max(cum_pos_ratio - cum_neg_ratio)
                     print(KS.item())
-                    if best < KS.item():
-                        best = KS.item()
+                    if best_fake < KS.item():
+                        best_fake = KS.item()
                         print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
 
@@ -902,13 +906,13 @@ class CTABGANSynthesizer:
 
                     # updating the weights of the generator
                     optimizerG.zero_grad()
-                    classifier.eval()
+                    classifier_save.eval()
                     # generate synthetic data and apply the final activation
                     fake = self.generator(noisez)
                     faket = self.Gtransformer.inverse_transform(fake)
                     fakeact = apply_activate(faket, self.transformer.output_info)
                     # computing classifier's target column predictions on the fake data along with returning corresponding true labels
-                    fake_pre, fake_label = classifier(fakeact)
+                    fake_pre, fake_label = classifier_save(fakeact)
                     if (st_ed[1] - st_ed[0])==2:
                         fake_label = fake_label.type_as(fake_pre)
                     # computing the loss to train the generator to improve semantic integrity between target column and rest of the data
@@ -928,9 +932,10 @@ class CTABGANSynthesizer:
                         cum_neg_ratio = n_negatives / n_negatives[-1]
                         KS = torch.max(cum_neg_ratio - cum_pos_ratio)
                         print(KS.item())
-                        if best < KS.item():
-                            best = KS.item()
-                            print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                        if best_real < KS.item():
+                            classifier_save = copy.deepcopy(classifier)
+                            best_real = KS.item()
+                            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
     def sample(self, n):
         
