@@ -10,7 +10,7 @@ import torch
 import numpy as np
 
 epochs = 150
-df_train = pd.read_csv('/Users/john/data/ML_data_dev.csv')
+df_train = pd.read_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_dev.csv')
 df_train = df_train.drop(['dev_val', 'pk'], axis=1)
 categorical_columns = list(df_train.columns)
 

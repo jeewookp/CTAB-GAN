@@ -716,7 +716,7 @@ class CTABGANSynthesizer:
             hidden_dims = 512
             batch_size = 512
 
-            df_test = pd.read_csv('/Users/john/data/ML_data_val.csv')
+            df_test = pd.read_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_val.csv')
 
             x_test = torch.from_numpy(df_test.drop(['dev_val', 'pk', 'bad'], axis=1).values).to(torch.float32)
 
