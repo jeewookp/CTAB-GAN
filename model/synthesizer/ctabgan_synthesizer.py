@@ -940,7 +940,7 @@ class CTABGANSynthesizer:
     def sample(self, n):
         
         # turning the generator into inference mode to effectively use running statistics in batch norm layers
-        self.generator.eval()
+        self.generator
         # column information associated with the transformer fit to the pre-processed training data
         output_info = self.transformer.output_info
         
