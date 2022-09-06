@@ -718,14 +718,14 @@ class CTABGANSynthesizer:
 
             df_test = pd.read_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_val.csv')
 
-            x_test = torch.from_numpy(df_test.drop(['dev_val', 'pk', 'bad'], axis=1).values).to(torch.float32)
+            x_test = torch.from_numpy(df_test.drop(['dev_val', 'pk', 'bad'], axis=1).values).to(torch.float32).to(self.device)
 
-            Y_test = torch.from_numpy(pd.get_dummies(df_test.bad).values[:, 0])
+            Y_test = torch.from_numpy(pd.get_dummies(df_test.bad).values[:, 0]).to(self.device)
 
-            x_train = torch.from_numpy(sample[:, :-1]).to(torch.float32)
-            Y_train = torch.from_numpy(1-sample[:, -1]).to(torch.uint8)
+            x_train = torch.from_numpy(sample[:, :-1]).to(torch.float32).to(self.device)
+            Y_train = torch.from_numpy(1-sample[:, -1]).to(torch.uint8).to(self.device)
 
-            test_classifier = Conv_Relu_Conv(x_test.shape[1], hidden_dims, 2)
+            test_classifier = Conv_Relu_Conv(x_test.shape[1], hidden_dims, 2).to(self.device)
             optimizer = torch.optim.Adam(test_classifier.parameters(), lr=1e-5)
             criterion = nn.CrossEntropyLoss()
 
