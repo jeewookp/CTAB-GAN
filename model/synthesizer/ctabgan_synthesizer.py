@@ -403,10 +403,12 @@ class Generator_transformer(Module):
         super(Generator_transformer, self).__init__()
         encoder_layer = nn.TransformerEncoderLayer(d_model=168, nhead=8)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
+        self.dropout = nn.Dropout(p=0.5)
         self.ouput_layer = nn.Linear(168, 256)
 
     def forward(self, input):
         output = self.transformer_encoder(input.squeeze(2).squeeze(2).unsqueeze(0)).squeeze(0)
+        output = self.dropout(output)
         output = self.ouput_layer(output)
         output.view(output.shape[0],1,16,16)
 
