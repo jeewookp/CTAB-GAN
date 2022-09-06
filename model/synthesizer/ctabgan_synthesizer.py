@@ -915,7 +915,7 @@ class CTABGANSynthesizer:
 
                     if iteration==steps_per_epoch-1:
                         classifier.eval()
-                        eval_pre, eval_label = classifier(train_data)
+                        eval_pre, eval_label = classifier(torch.from_numpy(train_data.astype('float32')).to(self.device))
                         print(eval_pre.shape,eval_label.shape)
 
     def sample(self, n):
