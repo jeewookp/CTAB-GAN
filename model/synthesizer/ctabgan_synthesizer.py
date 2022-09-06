@@ -664,6 +664,7 @@ class CTABGANSynthesizer:
         # assigning the respective optimizers for the generator and discriminator networks
         optimizer_params = dict(lr=2e-4, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale)
         optimizerG = Adam(self.generator.parameters(), **optimizer_params)
+        optimizerGC = Adam(self.generator.parameters(), **dict(lr=1e-5, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale))
         optimizerD = Adam(discriminator.parameters(), **optimizer_params)
 
        
@@ -675,7 +676,7 @@ class CTABGANSynthesizer:
             st_ed= get_st_ed(target_index,self.transformer.output_info)
             # configuring the classifier network and it's optimizer accordingly 
             classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
-            optimizerC = optim.Adam(classifier.parameters(),**dict(lr=1e-5, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale))
+            optimizerC = optim.Adam(classifier.parameters(),**optimizer_params)
         
         # initializing learnable parameters of the discrimnator and generator networks  
         self.generator.apply(weights_init)
@@ -897,7 +898,7 @@ class CTABGANSynthesizer:
                     optimizerC.step()
 
                     # updating the weights of the generator
-                    optimizerG.zero_grad()
+                    optimizerGC.zero_grad()
                     # generate synthetic data and apply the final activation
                     fake = self.generator(noisez)
                     faket = self.Gtransformer.inverse_transform(fake)
@@ -909,7 +910,7 @@ class CTABGANSynthesizer:
                     # computing the loss to train the generator to improve semantic integrity between target column and rest of the data
                     loss_cg = c_loss(fake_pre, fake_label)
                     loss_cg.backward()
-                    optimizerG.step()
+                    optimizerGC.step()
 
                             
     def sample(self, n):
