@@ -703,50 +703,50 @@ class CTABGANSynthesizer:
 
 
 
-            sample = self.sample(61240)
-            import torch.nn as nn
-            import torch.nn.functional as F
-            import random
-
-            fake_train_data = self.transformer.transform(sample)
-            fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
-
-            test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
-            optimizer = torch.optim.Adam(test_classifier.parameters(), lr=1e-5)
-            criterion = nn.BCELoss()
-
-            for i in range(30000):
-                test_classifier.train()
-
-                samples = random.sample(range(fake_train_data.shape[0]), self.batch_size)
-                fake_train_data_unit = fake_train_data[samples]
-
-                optimizer.zero_grad()
-                fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
-                print(st_ed)
-                print(fake_train_data_unit_pre.dtype,fake_train_data_unit_label.dtype)
-                loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
-                loss.backward()
-                optimizer.step()
-                if i == 0:
-                    avg_loss = loss.item()
-                else:
-                    avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
-                if i % 1000 == 0:
-                    test_classifier.eval()
-                    print(i, avg_loss)
-                    eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
-                    sorted_indices = torch.argsort(eval_pre)
-                    sorted_labels = eval_label[sorted_indices]
-                    n_positives = torch.cumsum(sorted_labels, dim=0)
-                    n_negatives = torch.arange(1, n_positives.shape[0] + 1,device=self.device) - n_positives
-                    cum_pos_ratio = n_positives / n_positives[-1]
-                    cum_neg_ratio = n_negatives / n_negatives[-1]
-                    KS = torch.max(cum_pos_ratio - cum_neg_ratio)
-                    print(KS.item())
-                    if best_fake < KS.item():
-                        best_fake = KS.item()
-                        print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+            # sample = self.sample(61240)
+            # import torch.nn as nn
+            # import torch.nn.functional as F
+            # import random
+            #
+            # fake_train_data = self.transformer.transform(sample)
+            # fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
+            #
+            # test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
+            # optimizer = torch.optim.Adam(test_classifier.parameters(), lr=1e-5)
+            # criterion = nn.BCELoss()
+            #
+            # for i in range(30000):
+            #     test_classifier.train()
+            #
+            #     samples = random.sample(range(fake_train_data.shape[0]), self.batch_size)
+            #     fake_train_data_unit = fake_train_data[samples]
+            #
+            #     optimizer.zero_grad()
+            #     fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
+            #     print(st_ed)
+            #     print(fake_train_data_unit_pre.dtype,fake_train_data_unit_label.dtype)
+            #     loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
+            #     loss.backward()
+            #     optimizer.step()
+            #     if i == 0:
+            #         avg_loss = loss.item()
+            #     else:
+            #         avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
+            #     if i % 1000 == 0:
+            #         test_classifier.eval()
+            #         print(i, avg_loss)
+            #         eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
+            #         sorted_indices = torch.argsort(eval_pre)
+            #         sorted_labels = eval_label[sorted_indices]
+            #         n_positives = torch.cumsum(sorted_labels, dim=0)
+            #         n_negatives = torch.arange(1, n_positives.shape[0] + 1,device=self.device) - n_positives
+            #         cum_pos_ratio = n_positives / n_positives[-1]
+            #         cum_neg_ratio = n_negatives / n_negatives[-1]
+            #         KS = torch.max(cum_pos_ratio - cum_neg_ratio)
+            #         print(KS.item())
+            #         if best_fake < KS.item():
+            #             best_fake = KS.item()
+            #             print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
 
 
@@ -878,6 +878,8 @@ class CTABGANSynthesizer:
                     if (st_ed[1] - st_ed[0])==2:
                         real_label = real_label.type_as(real_pre)
                     # computing the loss to train the classifier so that it can perform well on the real data
+                    print(real_pre.dtype, real_label.dtype)
+
                     loss_cc = c_loss(real_pre, real_label)
                     loss_cc.backward()
                     optimizerC.step()
