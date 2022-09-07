@@ -723,6 +723,7 @@ class CTABGANSynthesizer:
 
                 optimizer.zero_grad()
                 fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
+                print(fake_train_data_unit_pre.dtype,fake_train_data_unit_label.dtype)
                 loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
                 loss.backward()
                 optimizer.step()
