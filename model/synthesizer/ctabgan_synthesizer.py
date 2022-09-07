@@ -704,7 +704,7 @@ class CTABGANSynthesizer:
 
 
         if problem_type:
-            for i in range(15000):
+            for i in range(30000):
                 samples = random.sample(range(train_data.shape[0]), self.batch_size)
                 train_data_unit = train_data[samples]
                 train_data_unit = torch.from_numpy(train_data_unit.astype('float32')).to(self.device)
@@ -730,15 +730,15 @@ class CTABGANSynthesizer:
                     cum_pos_ratio = n_positives / n_positives[-1]
                     cum_neg_ratio = n_negatives / n_negatives[-1]
                     KS = torch.max(cum_neg_ratio - cum_pos_ratio)
-                    print(KS.item())
+                    print(i, KS.item())
                     with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                        f.write(f'{KS.item()}\n')
+                        f.write(f'{i} {KS.item()}\n')
                     if best_real < KS.item():
                         classifier_save = copy.deepcopy(classifier)
                         best_real = KS.item()
-                        print(f'{i} !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                         with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                            f.write(f'{i} !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
+                            f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
 
 
 
