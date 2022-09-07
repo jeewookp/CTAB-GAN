@@ -567,6 +567,7 @@ def weights_init(model):
         init.normal_(model.weight.data, 1.0, 0.02)
         init.constant_(model.bias.data, 0)
 
+
 class CTABGANSynthesizer:
 
     """
@@ -612,7 +613,7 @@ class CTABGANSynthesizer:
         self.generator = None
 
     def fit(self, train_data=pd.DataFrame, eval_data=pd.DataFrame, categorical=[], mixed={}, type={}):
-        
+
         # obtaining the column index of the target column used for ML tasks
         problem_type = None
         target_index = None
@@ -627,8 +628,6 @@ class CTABGANSynthesizer:
         self.transformer = DataTransformer(train_data=train_data, categorical_list=categorical, mixed_dict=mixed)
         self.transformer.fit() 
         train_data = self.transformer.transform(train_data.values)
-        self.transformer_eval = DataTransformer(train_data=eval_data, categorical_list=categorical, mixed_dict=mixed)
-        self.transformer_eval.fit()
         eval_data = self.transformer.transform(eval_data.values)
         # storing column size of the transformed training data
         data_dim = self.transformer.output_dim
@@ -709,43 +708,22 @@ class CTABGANSynthesizer:
             import torch.nn.functional as F
             import random
 
-            class Conv_Relu_Conv(torch.nn.Module):
-                def __init__(self, in_dims, hidden_dims, out_dims):
-                    super(Conv_Relu_Conv, self).__init__()
-                    self.fc0 = nn.Linear(in_dims, hidden_dims)
-                    self.fc1 = nn.Linear(hidden_dims, out_dims)
+            fake_train_data = self.transformer.transform(sample)
+            fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
 
-                def forward(self, input):
-                    input = F.relu(self.fc0(input))
-                    input = self.fc1(input)
-                    return input
-
-            hidden_dims = 512
-            batch_size = 512
-
-            df_test = pd.read_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_val.csv')
-
-            x_test = torch.from_numpy(df_test.drop(['dev_val', 'pk', 'bad'], axis=1).values).to(torch.float32).to(self.device)
-
-            Y_test = torch.from_numpy(pd.get_dummies(df_test.bad).values[:, 0]).to(self.device)
-
-            x_train = torch.from_numpy(sample[:, :-1]).to(torch.float32).to(self.device)
-            Y_train = torch.from_numpy(1-sample[:, -1]).to(torch.uint8).to(self.device)
-
-            test_classifier = Conv_Relu_Conv(x_test.shape[1], hidden_dims, 2).to(self.device)
+            test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
             optimizer = torch.optim.Adam(test_classifier.parameters(), lr=1e-5)
-            criterion = nn.CrossEntropyLoss()
+            criterion = nn.BCELoss()
 
             for i in range(30000):
                 test_classifier.train()
 
-                samples = random.sample(range(x_train.shape[0]), batch_size)
-                x_train_unit = x_train[samples]
-                Y_train_unit = Y_train[samples]
+                samples = random.sample(range(fake_train_data.shape[0]), self.batch_size)
+                fake_train_data_unit = fake_train_data[samples]
 
-                output = test_classifier(x_train_unit)
-                loss = criterion(output, Y_train_unit)
-                test_classifier.zero_grad()
+                optimizer.zero_grad()
+                fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
+                loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
                 loss.backward()
                 optimizer.step()
                 if i == 0:
@@ -755,11 +733,9 @@ class CTABGANSynthesizer:
                 if i % 1000 == 0:
                     test_classifier.eval()
                     print(i, avg_loss)
-                    output = test_classifier(x_test)
-                    output = torch.exp(output)
-                    output = output[:, 0] / (output[:, 0] + output[:, 1])
-                    sorted_indices = torch.argsort(output)
-                    sorted_labels = Y_test[sorted_indices]
+                    eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
+                    sorted_indices = torch.argsort(eval_pre)
+                    sorted_labels = eval_label[sorted_indices]
                     n_positives = torch.cumsum(sorted_labels, dim=0)
                     n_negatives = torch.arange(1, n_positives.shape[0] + 1,device=self.device) - n_positives
                     cum_pos_ratio = n_positives / n_positives[-1]
@@ -939,8 +915,6 @@ class CTABGANSynthesizer:
 
     def sample(self, n):
         
-        # turning the generator into inference mode to effectively use running statistics in batch norm layers
-        self.generator
         # column information associated with the transformer fit to the pre-processed training data
         output_info = self.transformer.output_info
         
