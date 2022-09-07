@@ -668,6 +668,7 @@ class CTABGANSynthesizer:
         
         # assigning the respective optimizers for the generator and discriminator networks
         optimizer_params = dict(lr=2e-4, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale)
+        optimizer_params_classifier = dict(lr=1e-5)
         optimizerG = Adam(self.generator.parameters(), **optimizer_params)
         optimizerD = Adam(discriminator.parameters(), **optimizer_params)
 
@@ -681,7 +682,7 @@ class CTABGANSynthesizer:
             # configuring the classifier network and it's optimizer accordingly 
             classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
             classifier_save = copy.deepcopy(classifier)
-            optimizerC = optim.Adam(classifier.parameters(),**optimizer_params)
+            optimizerC = optim.Adam(classifier.parameters(),**optimizer_params_classifier)
         
         # initializing learnable parameters of the discrimnator and generator networks  
         self.generator.apply(weights_init)
@@ -704,7 +705,7 @@ class CTABGANSynthesizer:
 
 
 
-            sample = self.sample(61240)
+            sample = self.sample(61240,use_saved_model=False)
             import torch.nn as nn
             import torch.nn.functional as F
             import random
@@ -714,7 +715,7 @@ class CTABGANSynthesizer:
             fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
 
             test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
-            test_optimizer = optim.Adam(test_classifier.parameters(),**optimizer_params)
+            test_optimizer = optim.Adam(test_classifier.parameters(),**optimizer_params_classifier)
             criterion = nn.BCELoss()
 
             for i in range(15000):
@@ -753,6 +754,7 @@ class CTABGANSynthesizer:
                     if best_fake < KS.item():
                         best_fake = KS.item()
                         print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                        self.generator_saved = copy.deepcopy(self.generator)
                         with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
                             f.write(f'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
@@ -929,7 +931,7 @@ class CTABGANSynthesizer:
                             with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
                                 f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
-    def sample(self, n):
+    def sample(self, n, use_saved_model):
         
         # column information associated with the transformer fit to the pre-processed training data
         output_info = self.transformer.output_info
@@ -945,7 +947,10 @@ class CTABGANSynthesizer:
             c = torch.from_numpy(c).to(self.device)
             noisez = torch.cat([noisez, c], dim=1)
             noisez =  noisez.view(self.batch_size,self.random_dim+self.cond_generator.n_opt,1,1)
-            fake = self.generator(noisez)
+            if use_saved_model:
+                fake = self.generator_saved(noisez)
+            else:
+                fake = self.generator(noisez)
             faket = self.Gtransformer.inverse_transform(fake)
             fakeact = apply_activate(faket,output_info)
             data.append(fakeact.detach().cpu().numpy())

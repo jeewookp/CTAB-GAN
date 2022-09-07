@@ -25,10 +25,9 @@ data_prep_eval = DataPrep(raw_df=df_eval, categorical=categorical_columns, log=[
 synthesizer.fit(train_data=data_prep.df, eval_data=data_prep_eval.df, categorical = data_prep.column_types["categorical"],
         mixed = data_prep.column_types["mixed"],type={"Classification": 'bad'})
 
-sample = synthesizer.sample(len(df_train))
+sample = synthesizer.sample(len(df_train),use_saved_model=True)
 syn = data_prep.inverse_prep(sample)
-
-
+syn.to_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_fake.csv', index=False)
 
 
 # import torch.nn as nn
