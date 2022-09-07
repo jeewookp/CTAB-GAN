@@ -712,7 +712,7 @@ class CTABGANSynthesizer:
             fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
 
             test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
-            optimizer = torch.optim.Adam(test_classifier.parameters(), lr=1e-5)
+            test_optimizer = optim.Adam(test_classifier.parameters(),**optimizer_params)
             criterion = nn.BCELoss()
 
             for i in range(30000):
@@ -721,13 +721,13 @@ class CTABGANSynthesizer:
                 samples = random.sample(range(fake_train_data.shape[0]), self.batch_size)
                 fake_train_data_unit = fake_train_data[samples]
 
-                optimizer.zero_grad()
+                test_optimizer.zero_grad()
                 fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
                 fake_train_data_unit_label = fake_train_data_unit_label.to(torch.float32)
 
                 loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
                 loss.backward()
-                optimizer.step()
+                test_optimizer.step()
                 if i == 0:
                     avg_loss = loss.item()
                 else:
