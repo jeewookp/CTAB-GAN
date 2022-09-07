@@ -742,7 +742,7 @@ class CTABGANSynthesizer:
                     n_negatives = torch.arange(1, n_positives.shape[0] + 1,device=self.device) - n_positives
                     cum_pos_ratio = n_positives / n_positives[-1]
                     cum_neg_ratio = n_negatives / n_negatives[-1]
-                    KS = torch.max(cum_pos_ratio - cum_neg_ratio)
+                    KS = torch.max(cum_neg_ratio - cum_pos_ratio)
                     print(KS.item())
                     if best_fake < KS.item():
                         best_fake = KS.item()
