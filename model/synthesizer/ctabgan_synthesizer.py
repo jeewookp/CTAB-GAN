@@ -736,9 +736,9 @@ class CTABGANSynthesizer:
                     if best_real < KS.item():
                         classifier_save = copy.deepcopy(classifier)
                         best_real = KS.item()
-                        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                        print(f'{i} !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                         with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                            f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
+                            f.write(f'{i} !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
 
 
 
