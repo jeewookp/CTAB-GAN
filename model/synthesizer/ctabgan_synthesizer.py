@@ -739,7 +739,7 @@ class CTABGANSynthesizer:
                     test_classifier.eval()
                     print(i, avg_loss)
                     with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log','a') as f:
-                        f.write(f'{i} {avg_loss}')
+                        f.write(f'{i} {avg_loss}\n')
                     eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
                     sorted_indices = torch.argsort(eval_pre)
                     sorted_labels = eval_label[sorted_indices]
@@ -750,13 +750,13 @@ class CTABGANSynthesizer:
                     KS = torch.max(cum_neg_ratio - cum_pos_ratio)
                     print(KS.item())
                     with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log','a') as f:
-                        f.write(f'{KS.item()}')
+                        f.write(f'{KS.item()}\n')
                     if best_fake < KS.item():
                         best_fake = KS.item()
                         print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
                         self.generator_saved = copy.deepcopy(self.generator)
                         with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                            f.write(f'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                            f.write(f'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n')
 
 
 
@@ -769,7 +769,7 @@ class CTABGANSynthesizer:
                 if iteration%10==0:
                     print(epoch,iteration)
                     with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                        f.write(f'{epoch} {iteration}')
+                        f.write(f'{epoch} {iteration}\n')
 
                 # sampling noise vectors using a standard normal distribution
                 noisez = torch.randn(self.batch_size, self.random_dim, device=self.device)
@@ -923,13 +923,13 @@ class CTABGANSynthesizer:
                         KS = torch.max(cum_neg_ratio - cum_pos_ratio)
                         print(KS.item())
                         with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                            f.write(f'{KS.item()}')
+                            f.write(f'{KS.item()}\n')
                         if best_real < KS.item():
                             classifier_save = copy.deepcopy(classifier)
                             best_real = KS.item()
                             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                             with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                                f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                                f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
 
     def sample(self, n, use_saved_model):
         
