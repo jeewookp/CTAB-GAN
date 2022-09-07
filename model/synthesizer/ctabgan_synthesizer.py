@@ -12,6 +12,8 @@ Conv2d, ConvTranspose2d, BatchNorm2d, Sigmoid, init, BCELoss, CrossEntropyLoss,S
 from model.synthesizer.transformer import ImageTransformer,DataTransformer
 from tqdm import tqdm
 import torch.nn as nn
+import random
+
 
 def random_choice_prob_index_sampling(probs,col_idx):
     
@@ -698,6 +700,48 @@ class CTABGANSynthesizer:
         best_real = 0
         best_fake = 0
 
+
+
+
+        if problem_type:
+            for i in range(15000):
+                samples = random.sample(range(train_data.shape[0]), self.batch_size)
+                train_data_unit = train_data[samples]
+                train_data_unit = torch.from_numpy(train_data_unit.astype('float32')).to(self.device)
+                if (st_ed[1] - st_ed[0]) == 2:
+                    c_loss = BCELoss()
+                else:
+                    c_loss = CrossEntropyLoss()
+                optimizerC.zero_grad()
+                classifier.train()
+                train_data_unit_pre, train_data_unit_label = classifier(train_data_unit)
+                if (st_ed[1] - st_ed[0]) == 2:
+                    train_data_unit_label = train_data_unit_label.type_as(train_data_unit_pre)
+                loss_cc = c_loss(train_data_unit_pre, train_data_unit_label)
+                loss_cc.backward()
+                optimizerC.step()
+                if i % 200 == 0:
+                    classifier.eval()
+                    eval_pre, eval_label = classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
+                    sorted_indices = torch.argsort(eval_pre)
+                    sorted_labels = eval_label[sorted_indices]
+                    n_positives = torch.cumsum(sorted_labels, dim=0)
+                    n_negatives = torch.arange(1, n_positives.shape[0] + 1, device=self.device) - n_positives
+                    cum_pos_ratio = n_positives / n_positives[-1]
+                    cum_neg_ratio = n_negatives / n_negatives[-1]
+                    KS = torch.max(cum_neg_ratio - cum_pos_ratio)
+                    print(KS.item())
+                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
+                        f.write(f'{KS.item()}\n')
+                    if best_real < KS.item():
+                        classifier_save = copy.deepcopy(classifier)
+                        best_real = KS.item()
+                        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                        with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
+                            f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
+
+
+
         for epoch in tqdm(range(self.epochs)):
 
 
@@ -708,7 +752,6 @@ class CTABGANSynthesizer:
             sample = self.sample(61240,use_saved_model=False)
             import torch.nn as nn
             import torch.nn.functional as F
-            import random
 
             fake_train_data = self.transformer.transform(sample)
 
@@ -875,25 +918,6 @@ class CTABGANSynthesizer:
                 # the classifier module is used in case there is a target column associated with ML tasks
                 if problem_type:
 
-                    c_loss = None
-                    # in case of binary classification, the binary cross entropy loss is used
-                    if (st_ed[1] - st_ed[0])==2:
-                        c_loss = BCELoss()
-                    # in case of multi-class classification, the standard cross entropy loss is used
-                    else: c_loss = CrossEntropyLoss()
-
-                    # updating the weights of the classifier
-                    optimizerC.zero_grad()
-                    classifier.train()
-                    # computing classifier's target column predictions on the real data along with returning corresponding true labels
-                    real_pre, real_label = classifier(real)
-                    if (st_ed[1] - st_ed[0])==2:
-                        real_label = real_label.type_as(real_pre)
-                    # computing the loss to train the classifier so that it can perform well on the real data
-                    loss_cc = c_loss(real_pre, real_label)
-                    loss_cc.backward()
-                    optimizerC.step()
-
                     # updating the weights of the generator
                     optimizerG.zero_grad()
                     classifier_save.eval()
@@ -909,27 +933,6 @@ class CTABGANSynthesizer:
                     loss_cg = c_loss(fake_pre, fake_label)
                     loss_cg.backward()
                     optimizerG.step()
-
-                    if iteration==steps_per_epoch-1:
-                        classifier.eval()
-                        eval_pre, eval_label = classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
-
-                        sorted_indices = torch.argsort(eval_pre)
-                        sorted_labels = eval_label[sorted_indices]
-                        n_positives = torch.cumsum(sorted_labels, dim=0)
-                        n_negatives = torch.arange(1, n_positives.shape[0] + 1, device=self.device) - n_positives
-                        cum_pos_ratio = n_positives / n_positives[-1]
-                        cum_neg_ratio = n_negatives / n_negatives[-1]
-                        KS = torch.max(cum_neg_ratio - cum_pos_ratio)
-                        print(KS.item())
-                        with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                            f.write(f'{KS.item()}\n')
-                        if best_real < KS.item():
-                            classifier_save = copy.deepcopy(classifier)
-                            best_real = KS.item()
-                            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                            with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                                f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
 
     def sample(self, n, use_saved_model):
         
