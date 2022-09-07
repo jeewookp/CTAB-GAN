@@ -715,7 +715,7 @@ class CTABGANSynthesizer:
             test_optimizer = optim.Adam(test_classifier.parameters(),**optimizer_params)
             criterion = nn.BCELoss()
 
-            for i in range(30000):
+            for i in range(15000):
                 test_classifier.train()
 
                 samples = random.sample(range(fake_train_data.shape[0]), self.batch_size)
@@ -732,7 +732,7 @@ class CTABGANSynthesizer:
                     avg_loss = loss.item()
                 else:
                     avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
-                if i % 1000 == 0:
+                if i % 200 == 0:
                     test_classifier.eval()
                     print(i, avg_loss)
                     eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
