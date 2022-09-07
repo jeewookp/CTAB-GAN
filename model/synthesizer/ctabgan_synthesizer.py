@@ -602,7 +602,8 @@ class CTABGANSynthesizer:
                  epochs=1):
                  
         self.random_dim = random_dim
-        self.class_dim = class_dim
+        # self.class_dim = class_dim
+        self.class_dim = (1024,)
         self.num_channels = num_channels
         self.dside = None
         self.gside = None
@@ -708,8 +709,7 @@ class CTABGANSynthesizer:
             import torch.nn.functional as F
             import random
 
-            # fake_train_data = self.transformer.transform(sample)
-            fake_train_data = train_data
+            fake_train_data = self.transformer.transform(sample)
 
             fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
 
