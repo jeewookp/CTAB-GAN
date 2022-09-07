@@ -708,7 +708,9 @@ class CTABGANSynthesizer:
             import torch.nn.functional as F
             import random
 
-            fake_train_data = self.transformer.transform(sample)
+            # fake_train_data = self.transformer.transform(sample)
+            fake_train_data = train_data
+
             fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
 
             test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
@@ -735,6 +737,8 @@ class CTABGANSynthesizer:
                 if i % 200 == 0:
                     test_classifier.eval()
                     print(i, avg_loss)
+                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log','a') as f:
+                        f.write(f'{i} {avg_loss}')
                     eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
                     sorted_indices = torch.argsort(eval_pre)
                     sorted_labels = eval_label[sorted_indices]
@@ -744,9 +748,13 @@ class CTABGANSynthesizer:
                     cum_neg_ratio = n_negatives / n_negatives[-1]
                     KS = torch.max(cum_neg_ratio - cum_pos_ratio)
                     print(KS.item())
+                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log','a') as f:
+                        f.write(f'{KS.item()}')
                     if best_fake < KS.item():
                         best_fake = KS.item()
                         print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+                        with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
+                            f.write(f'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
 
 
@@ -758,6 +766,8 @@ class CTABGANSynthesizer:
 
                 if iteration%10==0:
                     print(epoch,iteration)
+                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
+                        f.write(f'{epoch} {iteration}')
 
                 # sampling noise vectors using a standard normal distribution
                 noisez = torch.randn(self.batch_size, self.random_dim, device=self.device)
@@ -910,10 +920,14 @@ class CTABGANSynthesizer:
                         cum_neg_ratio = n_negatives / n_negatives[-1]
                         KS = torch.max(cum_neg_ratio - cum_pos_ratio)
                         print(KS.item())
+                        with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
+                            f.write(f'{KS.item()}')
                         if best_real < KS.item():
                             classifier_save = copy.deepcopy(classifier)
                             best_real = KS.item()
                             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                            with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
+                                f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
 
     def sample(self, n):
         
