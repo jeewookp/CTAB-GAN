@@ -857,6 +857,7 @@ class CTABGANSynthesizer:
                 np.random.shuffle(perm)
                 real = data_sampler.sample(self.batch_size, col[perm], opt[perm])
                 real = torch.from_numpy(real.astype('float32')).to(self.device)
+                print(real)
 
                 # storing shuffled ordering of the conditional vectors
                 c_perm = c[perm]
@@ -878,8 +879,8 @@ class CTABGANSynthesizer:
                 optimizerD.zero_grad()
 
                 # # transforming the real and synthetic data into the image domain for feeding it to the discriminator
-                real_cat_d = self.Dtransformer.transform(real_cat)
-                fake_cat_d = self.Dtransformer.transform(fake_cat)
+                # real_cat_d = self.Dtransformer.transform(real_cat)
+                # fake_cat_d = self.Dtransformer.transform(fake_cat)
                 # # computing the probability of the discriminator to correctly classify real samples hence y_real should ideally be close to 1
                 # y_real,_ = discriminator(real_cat_d)
                 # # computing the probability of the discriminator to correctly classify fake samples hence y_fake should ideally be close to 0
