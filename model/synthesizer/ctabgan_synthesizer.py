@@ -762,9 +762,11 @@ class CTABGANSynthesizer:
             import torch.nn.functional as F
 
             syn = data_prep.inverse_prep(sample)
-            fake_train_data = torch.from_numpy(syn.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32)
-            fake_train_label = torch.from_numpy(pd.get_dummies(syn.bad).values[:, 1])
-            test_classifier = Conv_Relu_Conv(fake_train_data.shape[1], 512, 2)
+            fake_train_data = torch.from_numpy(syn.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
+            fake_train_label = torch.from_numpy(pd.get_dummies(syn.bad).values[:, 1]).to(self.device)
+            test_classifier = Conv_Relu_Conv(fake_train_data.shape[1], 512, 2).to(self.device)
+            eval_data_data = torch.from_numpy(eval_data.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
+            eval_label = torch.from_numpy(pd.get_dummies(eval_data.bad).values[:, 1]).to(self.device)
 
             # fake_train_data = self.transformer.transform(sample)
             # fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
@@ -801,7 +803,10 @@ class CTABGANSynthesizer:
                     print(i, avg_loss)
                     with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log','a') as f:
                         f.write(f'{i} {avg_loss}\n')
-                    eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
+
+                    eval_pre = test_classifier(eval_data_data)
+
+                    # eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
                     sorted_indices = torch.argsort(eval_pre)
                     sorted_labels = eval_label[sorted_indices]
                     n_positives = torch.cumsum(sorted_labels, dim=0)
