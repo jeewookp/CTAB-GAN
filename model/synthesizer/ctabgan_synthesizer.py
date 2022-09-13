@@ -617,6 +617,8 @@ class CTABGANSynthesizer:
 
     def fit(self, data_prep, train_data=pd.DataFrame, eval_data=pd.DataFrame, categorical=[], mixed={}, type={}):
 
+        eval_data_df = eval_data
+
         # obtaining the column index of the target column used for ML tasks
         problem_type = None
         target_index = None
@@ -765,8 +767,8 @@ class CTABGANSynthesizer:
             fake_train_data = torch.from_numpy(syn.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
             fake_train_label = torch.from_numpy(pd.get_dummies(syn.bad).values[:, 1]).to(self.device)
             test_classifier = Conv_Relu_Conv(fake_train_data.shape[1], 512, 2).to(self.device)
-            eval_data_data = torch.from_numpy(eval_data.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
-            eval_label = torch.from_numpy(pd.get_dummies(eval_data.bad).values[:, 1]).to(self.device)
+            eval_data_data = torch.from_numpy(eval_data_df.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
+            eval_label = torch.from_numpy(pd.get_dummies(eval_data_df.bad).values[:, 1]).to(self.device)
 
             # fake_train_data = self.transformer.transform(sample)
             # fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
