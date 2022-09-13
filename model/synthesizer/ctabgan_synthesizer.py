@@ -825,6 +825,7 @@ class CTABGANSynthesizer:
                         best_fake = KS.item()
                         print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
                         self.generator_saved = copy.deepcopy(self.generator)
+                        syn.to_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_fake.csv', index=False)
                         with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
                             f.write(f'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n')
 
