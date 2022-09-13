@@ -808,7 +808,7 @@ class CTABGANSynthesizer:
 
                     eval_pre = test_classifier(eval_data_data)
                     eval_pre = torch.exp(eval_pre)
-                    eval_pre = eval_pre[:, 0] / (eval_pre[:, 0] + eval_pre[:, 1])
+                    eval_pre = eval_pre[:, 1] / (eval_pre[:, 0] + eval_pre[:, 1])
 
                     # eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
                     sorted_indices = torch.argsort(eval_pre)
