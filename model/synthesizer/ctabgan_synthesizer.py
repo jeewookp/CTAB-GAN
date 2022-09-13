@@ -14,7 +14,6 @@ from tqdm import tqdm
 import torch.nn as nn
 import random
 
-
 def random_choice_prob_index_sampling(probs,col_idx):
     
     """
@@ -616,7 +615,7 @@ class CTABGANSynthesizer:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.generator = None
 
-    def fit(self, train_data=pd.DataFrame, eval_data=pd.DataFrame, categorical=[], mixed={}, type={}):
+    def fit(self, data_prep, train_data=pd.DataFrame, eval_data=pd.DataFrame, categorical=[], mixed={}, type={}):
 
         # obtaining the column index of the target column used for ML tasks
         problem_type = None
@@ -747,18 +746,30 @@ class CTABGANSynthesizer:
 
 
 
+            class Conv_Relu_Conv(torch.nn.Module):
+                def __init__(self, in_dims, hidden_dims, out_dims):
+                    super(Conv_Relu_Conv, self).__init__()
+                    self.fc0 = nn.Linear(in_dims, hidden_dims)
+                    self.fc1 = nn.Linear(hidden_dims, out_dims)
 
-
+                def forward(self, input):
+                    input = F.relu(self.fc0(input))
+                    input = self.fc1(input)
+                    return input
 
             sample = self.sample(61240,use_saved_model=False)
             import torch.nn as nn
             import torch.nn.functional as F
 
-            fake_train_data = self.transformer.transform(sample)
+            syn = data_prep.inverse_prep(sample)
+            fake_train_data = torch.from_numpy(syn.drop(['dev_val', 'pk', 'bad'], axis=1).values).to(torch.float32)
+            fake_train_label = torch.from_numpy(pd.get_dummies(syn.bad).values[:, 1])
+            test_classifier = Conv_Relu_Conv(fake_train_data.shape[1], 512, 2)
 
-            fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
+            # fake_train_data = self.transformer.transform(sample)
+            # fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
+            # test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
 
-            test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
             test_optimizer = optim.Adam(test_classifier.parameters(),**optimizer_params_classifier)
             criterion = nn.BCELoss()
 
@@ -766,13 +777,19 @@ class CTABGANSynthesizer:
                 test_classifier.train()
 
                 samples = random.sample(range(fake_train_data.shape[0]), self.batch_size)
-                fake_train_data_unit = fake_train_data[samples]
 
                 test_optimizer.zero_grad()
-                fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
-                fake_train_data_unit_label = fake_train_data_unit_label.to(torch.float32)
+                fake_train_data_unit = fake_train_data[samples]
+                fake_train_label_unit = fake_train_label[samples]
+                output = test_classifier(fake_train_data_unit)
+                loss = criterion(output, fake_train_label_unit)
 
-                loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
+                # fake_train_data_unit = fake_train_data[samples]
+                # test_optimizer.zero_grad()
+                # fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
+                # fake_train_data_unit_label = fake_train_data_unit_label.to(torch.float32)
+                # loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
+
                 loss.backward()
                 test_optimizer.step()
                 if i == 0:

@@ -35,8 +35,8 @@ hidden_dims = 512
 feature_dims = 10
 batch_size = 512
 
-df_train = pd.read_csv('/Users/john/data/ML_data_dev.csv')
-df_test = pd.read_csv('/Users/john/data/ML_data_val.csv')
+df_train = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_dev.csv')
+df_test = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_val.csv')
 
 x_train = torch.from_numpy(df_train.drop(['dev_val', 'pk','bad'], axis=1).values).to(torch.float32)
 x_test = torch.from_numpy(df_test.drop(['dev_val', 'pk','bad'], axis=1).values).to(torch.float32)
