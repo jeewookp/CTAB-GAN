@@ -857,7 +857,7 @@ class CTABGANSynthesizer:
                 np.random.shuffle(perm)
                 real = data_sampler.sample(self.batch_size, col[perm], opt[perm])
                 real = torch.from_numpy(real.astype('float32')).to(self.device)
-                print(real)
+                real = real + 0.5 * torch.randn_like(real)
 
                 # storing shuffled ordering of the conditional vectors
                 c_perm = c[perm]
