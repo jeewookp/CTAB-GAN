@@ -771,7 +771,7 @@ class CTABGANSynthesizer:
             # test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
 
             test_optimizer = optim.Adam(test_classifier.parameters(),**optimizer_params_classifier)
-            criterion = nn.BCELoss()
+            criterion = nn.CrossEntropyLoss()
 
             for i in range(15000):
                 test_classifier.train()
