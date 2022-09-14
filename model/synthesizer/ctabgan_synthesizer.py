@@ -675,7 +675,9 @@ class CTABGANSynthesizer:
         # discriminator = Discriminator(layers_D).to(self.device)
         
         # assigning the respective optimizers for the generator and discriminator networks
-        optimizer_params = dict(lr=2e-4, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale)
+        # optimizer_params = dict(lr=2e-4, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale)
+        optimizer_params = dict(lr=1e-5)
+
         optimizer_params_classifier = dict(lr=1e-5)
         optimizerG = Adam(self.generator.parameters(), **optimizer_params)
         optimizerD = Adam(discriminator.parameters(), **optimizer_params)
