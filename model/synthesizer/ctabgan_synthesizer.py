@@ -710,7 +710,7 @@ class CTABGANSynthesizer:
 
 
         if problem_type:
-            for i in range(15000):
+            for i in range(100000):
                 samples = random.sample(range(train_data.shape[0]), self.batch_size)
                 train_data_unit = train_data[samples]
                 train_data_unit = torch.from_numpy(train_data_unit.astype('float32')).to(self.device)
