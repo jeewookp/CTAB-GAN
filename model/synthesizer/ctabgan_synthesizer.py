@@ -989,8 +989,9 @@ class CTABGANSynthesizer:
                     optimizerGC.step()
 
                 if iteration%10==0:
-                    print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
+                    # print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
                     # print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_cg.item())
+                    print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item())
 
     def sample(self, n, use_saved_model):
         
