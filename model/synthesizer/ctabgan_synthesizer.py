@@ -885,6 +885,7 @@ class CTABGANSynthesizer:
                 # fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
                 #                       activate_scale=self.activate_scale)
                 fakeact = faket
+                print(real.shape,fakeact.shape)
 
                 # the generated data is then concatenated with the corresponding condition vectors
                 fake_cat = torch.cat([fakeact, c], dim=1)
