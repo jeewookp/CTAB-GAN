@@ -774,7 +774,6 @@ class CTABGANSynthesizer:
 
             syn = data_prep.inverse_prep(sample)
             fake_train_data = torch.from_numpy(syn.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
-            print(pd.get_dummies(syn.bad).values.shape)
             fake_train_label = torch.from_numpy(pd.get_dummies(syn.bad).values[:, 1]).to(self.device)
             test_classifier = Conv_Relu_Conv(fake_train_data.shape[1], 512, 2).to(self.device)
             eval_data_data = torch.from_numpy(eval_data_df.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
@@ -981,6 +980,9 @@ class CTABGANSynthesizer:
                     loss_cg = c_loss(fake_pre, fake_label)
                     loss_cg.backward()
                     optimizerG.step()
+
+                if iteration%10==0:
+                    print(loss_d.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
 
     def sample(self, n, use_saved_model):
         
