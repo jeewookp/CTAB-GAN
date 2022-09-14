@@ -390,7 +390,7 @@ class Discriminator(Module):
 class Discriminator_transformer(Module):
     def __init__(self):
         super(Discriminator_transformer, self).__init__()
-        encoder_layer = nn.TransformerEncoderLayer(d_model=136, nhead=8, dim_feedforward=128)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=136, nhead=8, dim_feedforward=256)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=2)
         self.ouput_layer = nn.Linear(136,1)
 
