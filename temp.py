@@ -22,12 +22,9 @@ df_eval = df_eval.drop(['dev_val', 'pk'], axis=1)
 data_prep_eval = DataPrep(raw_df=df_eval, categorical=categorical_columns, log=[], mixed={}, integer=[],
                      type={"Classification": 'bad'})
 
-# synthesizer.fit(data_prep=data_prep, train_data=data_prep.df, eval_data=data_prep_eval.df,
-#                 categorical = data_prep.column_types["categorical"], mixed = data_prep.column_types["mixed"],
-#                 type={"Classification": 'bad'})
 synthesizer.fit(data_prep=data_prep, train_data=data_prep.df, eval_data=data_prep_eval.df,
                 categorical = data_prep.column_types["categorical"], mixed = data_prep.column_types["mixed"],
-                type={})
+                type={"Classification": 'bad'})
 
 sample = synthesizer.sample(len(df_train),use_saved_model=True)
 syn = data_prep.inverse_prep(sample)

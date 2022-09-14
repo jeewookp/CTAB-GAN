@@ -714,6 +714,8 @@ class CTABGANSynthesizer:
                 samples = random.sample(range(train_data.shape[0]), self.batch_size)
                 train_data_unit = train_data[samples]
                 train_data_unit = torch.from_numpy(train_data_unit.astype('float32')).to(self.device)
+                train_data_unit = apply_activate(train_data_unit, self.transformer.output_info, tau=self.tau,
+                                      activate_scale=self.activate_scale)
                 if (st_ed[1] - st_ed[0]) == 2:
                     c_loss = BCELoss()
                 else:
@@ -728,7 +730,10 @@ class CTABGANSynthesizer:
                 optimizerC.step()
                 if i % 200 == 0:
                     classifier.eval()
-                    eval_pre, eval_label = classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
+                    eval_data_temp = torch.from_numpy(eval_data.astype('float32')).to(self.device)
+                    eval_data_temp = apply_activate(eval_data_temp, self.transformer.output_info, tau=self.tau,
+                                                     activate_scale=self.activate_scale)
+                    eval_pre, eval_label = classifier(eval_data_temp)
                     sorted_indices = torch.argsort(eval_pre)
                     sorted_labels = eval_label[sorted_indices]
                     n_positives = torch.cumsum(sorted_labels, dim=0)
