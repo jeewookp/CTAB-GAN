@@ -616,8 +616,8 @@ class CTABGANSynthesizer:
         self.epochs = epochs
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.generator = None
-        self.tau = 3
-        self.activate_scale = 2
+        self.tau = 4
+        self.activate_scale = 4
 
     def fit(self, data_prep, train_data=pd.DataFrame, eval_data=pd.DataFrame, categorical=[], mixed={}, type={}):
 
