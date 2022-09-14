@@ -710,12 +710,13 @@ class CTABGANSynthesizer:
 
 
         if problem_type:
-            for i in range(100000):
+            for i in range(15000):
                 samples = random.sample(range(train_data.shape[0]), self.batch_size)
                 train_data_unit = train_data[samples]
                 train_data_unit = torch.from_numpy(train_data_unit.astype('float32')).to(self.device)
-                train_data_unit = apply_activate(train_data_unit, self.transformer.output_info, tau=self.tau,
-                                      activate_scale=self.activate_scale)
+                # train_data_unit = apply_activate(train_data_unit, self.transformer.output_info, tau=self.tau,
+                #                       activate_scale=self.activate_scale)
+                train_data_unit = train_data_unit + 0.5*torch.randn_like(train_data_unit)
                 if (st_ed[1] - st_ed[0]) == 2:
                     c_loss = BCELoss()
                 else:
@@ -731,8 +732,8 @@ class CTABGANSynthesizer:
                 if i % 200 == 0:
                     classifier.eval()
                     eval_data_temp = torch.from_numpy(eval_data.astype('float32')).to(self.device)
-                    eval_data_temp = apply_activate(eval_data_temp, self.transformer.output_info, tau=self.tau,
-                                                     activate_scale=self.activate_scale)
+                    # eval_data_temp = apply_activate(eval_data_temp, self.transformer.output_info, tau=self.tau,
+                    #                                  activate_scale=self.activate_scale)
                     eval_pre, eval_label = classifier(eval_data_temp)
                     sorted_indices = torch.argsort(eval_pre)
                     sorted_labels = eval_label[sorted_indices]
@@ -867,8 +868,10 @@ class CTABGANSynthesizer:
                 np.random.shuffle(perm)
                 real = data_sampler.sample(self.batch_size, col[perm], opt[perm])
                 real = torch.from_numpy(real.astype('float32')).to(self.device)
-                real = apply_activate(real, self.transformer.output_info, tau=self.tau,
-                                      activate_scale=self.activate_scale)
+                # real = apply_activate(real, self.transformer.output_info, tau=self.tau,
+                #                       activate_scale=self.activate_scale)
+                real = real + 0.5*torch.randn_like(real)
+
 
                 # storing shuffled ordering of the conditional vectors
                 c_perm = c[perm]
@@ -879,8 +882,9 @@ class CTABGANSynthesizer:
                 # converting it into the tabular domain as per format of the trasformed training data
                 faket = self.Gtransformer.inverse_transform(fake)
                 # applying final activation on the generated data (i.e., tanh for numeric and gumbel-softmax for categorical)
-                fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
-                                      activate_scale=self.activate_scale)
+                # fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
+                #                       activate_scale=self.activate_scale)
+                fakeact = faket
 
                 # the generated data is then concatenated with the corresponding condition vectors
                 fake_cat = torch.cat([fakeact, c], dim=1)
@@ -923,8 +927,9 @@ class CTABGANSynthesizer:
                 # similarly generating synthetic data and applying final activation
                 fake = self.generator(noisez)
                 faket = self.Gtransformer.inverse_transform(fake)
-                fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
-                                      activate_scale=self.activate_scale)
+                # fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
+                #                       activate_scale=self.activate_scale)
+                fakeact = faket
                 # concatenating conditional vectors and converting it to the image domain to be fed to the discriminator
                 fake_cat = torch.cat([fakeact, c], dim=1)
 
@@ -965,8 +970,9 @@ class CTABGANSynthesizer:
                     # generate synthetic data and apply the final activation
                     fake = self.generator(noisez)
                     faket = self.Gtransformer.inverse_transform(fake)
-                    fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
-                                      activate_scale=self.activate_scale)
+                    # fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
+                    #                   activate_scale=self.activate_scale)
+                    fakeact = faket
                     # computing classifier's target column predictions on the fake data along with returning corresponding true labels
                     fake_pre, fake_label = classifier_save(fakeact)
                     if (st_ed[1] - st_ed[0])==2:
@@ -997,8 +1003,9 @@ class CTABGANSynthesizer:
             else:
                 fake = self.generator(noisez)
             faket = self.Gtransformer.inverse_transform(fake)
-            fakeact = apply_activate(faket,output_info,tau=self.tau,
-                                      activate_scale=self.activate_scale)
+            # fakeact = apply_activate(faket,output_info,tau=self.tau,
+            #                           activate_scale=self.activate_scale)
+            fakeact = faket
             data.append(fakeact.detach().cpu().numpy())
 
         data = np.concatenate(data, axis=0)
