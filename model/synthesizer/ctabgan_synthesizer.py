@@ -940,13 +940,14 @@ class CTABGANSynthesizer:
                 # _,info_real = discriminator(real_cat_d)
                 y_fake,info_fake = discriminator(fake_cat)
                 _,info_real = discriminator(real_cat)
+                loss_g = -(torch.log(y_fake + 1e-4).mean())
 
                 # computing the conditional loss to ensure the generator generates data records with the chosen category as per the conditional vector
                 cross_entropy = cond_loss(fake, self.transformer.output_info, c, m)
 
                 # computing the loss to train the generator where we want y_fake to be close to 1 to fool the discriminator
                 # and cross_entropy to be close to 0 to ensure generator's output matches the conditional vector
-                g = -(torch.log(y_fake + 1e-4).mean()) + cross_entropy
+                g = loss_g + cross_entropy
                 # in order to backprop the gradient of separate losses w.r.t to the learnable weight of the network independently
                 # we may use retain_graph=True in backward() method in the first back-propagated loss
                 # to maintain the computation graph to execute the second backward pass efficiently
@@ -982,7 +983,7 @@ class CTABGANSynthesizer:
                     optimizerG.step()
 
                 if iteration%10==0:
-                    print(loss_d.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
+                    print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
 
     def sample(self, n, use_saved_model):
         
