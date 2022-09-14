@@ -116,11 +116,10 @@ for i in range(3000):
             best = KS_val2
             print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
+
 x_fake_val1 = torch.cat([x_fake,x_val1],dim=0)
 Y_fake_val1 = torch.cat([Y_fake,Y_val1],dim=0)
-
 classifier = Conv_Relu_Conv(x_train.shape[1],512,2)
-
 optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
 best = 0
 for i in range(30000):

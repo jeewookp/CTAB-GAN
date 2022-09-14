@@ -4,7 +4,7 @@ import numpy as np
 
 df_fake = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_fake.csv').values
 for i in range(100):
-    print(np.min(np.sum(np.abs(df_fake[i:i+1]-df_fake[list(set(range(100))-set([i]))]),axis=1)))
+    print(np.min(np.sum(np.abs(df_fake[i:i+1]-df_fake[list(set(range(df_fake.shape[0]))-set([i]))]),axis=1)))
 
 
 

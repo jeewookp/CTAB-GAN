@@ -38,8 +38,11 @@ syn.to_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_fake.csv', inde
 
 
 
+import torch.nn.functional as F
+import torch
 
-
+a = torch.tensor([0,1],dtype=torch.float32)
+print(F.gumbel_softmax(a,tau=0.2))
 
 
 
