@@ -396,7 +396,7 @@ class Discriminator_transformer(Module):
 
     def forward(self, input):
         output1 = self.transformer_encoder(input.unsqueeze(0)).squeeze(0)
-        output0 = self.ouput_layer(output1)
+        output0 = self.ouput_layer(torch.mean(output1,dim=0,keepdim=True))
         output0 = torch.sigmoid(output0)
         return output0, output1
 
