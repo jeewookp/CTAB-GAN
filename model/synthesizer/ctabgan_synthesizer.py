@@ -390,8 +390,8 @@ class Discriminator(Module):
 class Discriminator_transformer(Module):
     def __init__(self):
         super(Discriminator_transformer, self).__init__()
-        encoder_layer = nn.TransformerEncoderLayer(d_model=136, nhead=8)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=136, nhead=8, dim_feedforward=32)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
         self.ouput_layer = nn.Linear(136,1)
 
     def forward(self, input):
@@ -717,7 +717,7 @@ class CTABGANSynthesizer:
                 train_data_unit = torch.from_numpy(train_data_unit.astype('float32')).to(self.device)
                 # train_data_unit = apply_activate(train_data_unit, self.transformer.output_info, tau=self.tau,
                 #                       activate_scale=self.activate_scale)
-                train_data_unit = train_data_unit + 1*torch.randn_like(train_data_unit)
+                train_data_unit = train_data_unit + 0.5*torch.randn_like(train_data_unit)
                 if (st_ed[1] - st_ed[0]) == 2:
                     c_loss = BCELoss()
                 else:
@@ -872,7 +872,7 @@ class CTABGANSynthesizer:
                 real = torch.from_numpy(real.astype('float32')).to(self.device)
                 # real = apply_activate(real, self.transformer.output_info, tau=self.tau,
                 #                       activate_scale=self.activate_scale)
-                real = real + 1*torch.randn_like(real)
+                real = real + 0.5*torch.randn_like(real)
 
 
                 # storing shuffled ordering of the conditional vectors
