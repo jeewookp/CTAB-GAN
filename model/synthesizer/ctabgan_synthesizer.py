@@ -959,11 +959,11 @@ class CTABGANSynthesizer:
                 # to maintain the computation graph to execute the second backward pass efficiently
                 g.backward(retain_graph=True)
                 # computing the information loss by comparing means and stds of real/fake feature representations extracted from discriminator's penultimate layer
-                # loss_mean = torch.norm(torch.mean(info_fake.view(self.batch_size,-1), dim=0) - torch.mean(info_real.view(self.batch_size,-1), dim=0), 1)
-                # loss_std = torch.norm(torch.std(info_fake.view(self.batch_size,-1), dim=0) - torch.std(info_real.view(self.batch_size,-1), dim=0), 1)
-                # loss_info = loss_mean + loss_std
+                loss_mean = torch.norm(torch.mean(info_fake.view(self.batch_size,-1), dim=0) - torch.mean(info_real.view(self.batch_size,-1), dim=0), 1)
+                loss_std = torch.norm(torch.std(info_fake.view(self.batch_size,-1), dim=0) - torch.std(info_real.view(self.batch_size,-1), dim=0), 1)
+                loss_info = loss_mean + loss_std
                 # computing the finally accumulated gradients
-                # loss_info.backward()
+                loss_info.backward()
                 # executing the backward step to update the weights
                 optimizerG.step()
 
@@ -989,8 +989,8 @@ class CTABGANSynthesizer:
                     optimizerGC.step()
 
                 if iteration%10==0:
-                    # print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
-                    print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_cg.item())
+                    print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
+                    # print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_cg.item())
 
     def sample(self, n, use_saved_model):
         
