@@ -776,6 +776,8 @@ class CTABGANSynthesizer:
             syn = data_prep.inverse_prep(sample)
             fake_train_data = torch.from_numpy(syn.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
             # fake_train_label = torch.from_numpy(pd.get_dummies(syn.bad).values[:, 1]).to(self.device)
+            print(syn.bad.values)
+            print(syn.bad.values.dtype)
             fake_train_label = torch.from_numpy(syn.bad.values).to(self.device)
             test_classifier = Conv_Relu_Conv(fake_train_data.shape[1], 512, 2).to(self.device)
             eval_data_data = torch.from_numpy(eval_data_df.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
