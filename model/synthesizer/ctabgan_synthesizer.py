@@ -411,8 +411,8 @@ class Generator_transformer(Module):
 
     def forward(self, input):
         # output = self.transformer_encoder(input.squeeze(2).squeeze(2).unsqueeze(0)).squeeze(0)
-        output = self.ouput_layer0(input.squeeze(2).squeeze(2))
-        output = self.transformer_encoder(output.unsqueeze(0)).squeeze(0)
+        output = F.relu(self.ouput_layer0(input.squeeze(2).squeeze(2)))
+        output = F.relu(self.transformer_encoder(output.unsqueeze(0)).squeeze(0))
         output = self.ouput_layer1(output)
 
         return output
