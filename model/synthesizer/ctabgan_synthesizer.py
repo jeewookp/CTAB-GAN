@@ -942,7 +942,7 @@ class CTABGANSynthesizer:
                 _,info_real = discriminator(real_cat)
 
                 # computing the conditional loss to ensure the generator generates data records with the chosen category as per the conditional vector
-                cross_entropy = cond_loss(faket, self.transformer.output_info, c, m)
+                cross_entropy = cond_loss(fake, self.transformer.output_info, c, m)
 
                 # computing the loss to train the generator where we want y_fake to be close to 1 to fool the discriminator
                 # and cross_entropy to be close to 0 to ensure generator's output matches the conditional vector
