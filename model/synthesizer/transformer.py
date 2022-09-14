@@ -91,7 +91,7 @@ class DataTransformer():
             if info['type'] == "continuous":
                 # fitting bgm model  
                 gm = BayesianGaussianMixture(
-                    n_components=self.n_clusters,
+                    self.n_clusters, 
                     weight_concentration_prior_type='dirichlet_process',
                     weight_concentration_prior=0.001, # lower values result in lesser modes being active
                     max_iter=100,n_init=1, random_state=42)
@@ -114,12 +114,12 @@ class DataTransformer():
                 
                 # in case of mixed columns, two bgm models are used
                 gm1 = BayesianGaussianMixture(
-                    n_components=self.n_clusters,
+                    self.n_clusters, 
                     weight_concentration_prior_type='dirichlet_process',
                     weight_concentration_prior=0.001, max_iter=100,
                     n_init=1,random_state=42)
                 gm2 = BayesianGaussianMixture(
-                    n_components=self.n_clusters,
+                    self.n_clusters,
                     weight_concentration_prior_type='dirichlet_process',
                     weight_concentration_prior=0.001, max_iter=100,
                     n_init=1,random_state=42)

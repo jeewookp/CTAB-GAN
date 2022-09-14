@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 import pandas as pd
 import torch
@@ -11,8 +9,7 @@ from torch.nn import (Dropout, LeakyReLU, Linear, Module, ReLU, Sequential,
 Conv2d, ConvTranspose2d, BatchNorm2d, Sigmoid, init, BCELoss, CrossEntropyLoss,SmoothL1Loss)
 from model.synthesizer.transformer import ImageTransformer,DataTransformer
 from tqdm import tqdm
-import torch.nn as nn
-import random
+
 
 def random_choice_prob_index_sampling(probs,col_idx):
     
@@ -110,7 +107,8 @@ class Condvec(object):
 
         if self.n_col == 0:
             return None
-
+        batch = batch
+        
         # each conditional vector in vec is a one-hot vector used to highlight a specific category across all possible one-hot-encoded representations 
         # (i.e., including modes of continuous and mixed columns)
         vec = np.zeros((batch, self.n_opt), dtype='float32')
@@ -123,8 +121,7 @@ class Condvec(object):
         mask[np.arange(batch), idx] = 1  
         
         # producing a list of selected categories within each of selected one-hot-encoding representation
-        opt1prime = random_choice_prob_index_sampling(self.p_sampling,idx)
-        # opt1prime = random_choice_prob_index_sampling(self.p_log_sampling,idx)
+        opt1prime = random_choice_prob_index_sampling(self.p_log_sampling,idx) 
         
         # assigning the appropriately chosen category for each corresponding conditional vector
         for i in np.arange(batch):
@@ -146,6 +143,8 @@ class Condvec(object):
 
         if self.n_col == 0:
             return None
+        
+        batch = batch
 
         # each conditional vector in vec is a one-hot vector used to highlight a specific category across all possible one-hot-encoded representations 
         # (i.e., including modes of continuous and mixed columns)
@@ -156,7 +155,6 @@ class Condvec(object):
 
         # producing a list of selected categories within each of selected one-hot-encoding representation
         opt1prime = random_choice_prob_index_sampling(self.p_sampling,idx)
-        # opt1prime = random_choice_prob_index_sampling(self.p_log_sampling,idx)
         
         # assigning the appropriately chosen category for each corresponding conditional vector
         for i in np.arange(batch):   
@@ -335,9 +333,8 @@ class Classifier(Module):
         for item in list(class_dims):
             seq += [
                 Linear(tmp_dim, item),
-                # LeakyReLU(0.2),
-                # Dropout(0.5)
-                ReLU(),
+                LeakyReLU(0.2),
+                Dropout(0.5)
             ]
             tmp_dim = item
         
@@ -385,38 +382,6 @@ class Discriminator(Module):
 
     def forward(self, input):
         return (self.seq(input)), self.seq_info(input)
-
-
-class Discriminator_transformer(Module):
-    def __init__(self):
-        super(Discriminator_transformer, self).__init__()
-        encoder_layer = nn.TransformerEncoderLayer(d_model=136, nhead=8, dim_feedforward=256)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
-        self.ouput_layer = nn.Linear(136,1)
-
-    def forward(self, input):
-        output1 = self.transformer_encoder(input.unsqueeze(0)).squeeze(0)
-        output0 = self.ouput_layer(torch.mean(output1,dim=0,keepdim=True))
-        output0 = torch.sigmoid(output0)
-        return output0, output1
-
-
-class Generator_transformer(Module):
-    def __init__(self):
-        super(Generator_transformer, self).__init__()
-        self.ouput_layer0 = nn.Linear(168, 512)
-        encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
-        self.ouput_layer1 = nn.Linear(512, 68)
-
-    def forward(self, input):
-        # output = self.transformer_encoder(input.squeeze(2).squeeze(2).unsqueeze(0)).squeeze(0)
-        output = F.relu(self.ouput_layer0(input.squeeze(2).squeeze(2)))
-        output = F.relu(self.transformer_encoder(output.unsqueeze(0)).squeeze(0))
-        output = self.ouput_layer1(output)
-
-        return output
-
 
 class Generator(Module):
     
@@ -514,7 +479,7 @@ def determine_layers_gen(side, random_dim, num_channels):
 
     return layers_G
 
-def apply_activate(data, output_info, tau, activate_scale):
+def apply_activate(data, output_info):
     
     """
     This function applies the final activation corresponding to the column information associated with transformer
@@ -527,8 +492,6 @@ def apply_activate(data, output_info, tau, activate_scale):
     1) act_data -> resulting data after applying the respective activations 
 
     """
-
-    data = data * activate_scale
     
     data_t = []
     # used to iterate through columns
@@ -545,7 +508,7 @@ def apply_activate(data, output_info, tau, activate_scale):
         elif item[1] == 'softmax':
             ed = st + item[0]
             # note that as tau approaches 0, a completely discrete one-hot-vector is obtained
-            data_t.append(F.gumbel_softmax(data[:, st:ed], tau=tau))
+            data_t.append(F.gumbel_softmax(data[:, st:ed], tau=0.2))
             st = ed
     
     act_data = torch.cat(data_t, dim=1) 
@@ -573,7 +536,6 @@ def weights_init(model):
     elif classname.find('BatchNorm') != -1:
         init.normal_(model.weight.data, 1.0, 0.02)
         init.constant_(model.bias.data, 0)
-
 
 class CTABGANSynthesizer:
 
@@ -609,8 +571,7 @@ class CTABGANSynthesizer:
                  epochs=1):
                  
         self.random_dim = random_dim
-        # self.class_dim = class_dim
-        self.class_dim = (1024,)
+        self.class_dim = class_dim
         self.num_channels = num_channels
         self.dside = None
         self.gside = None
@@ -619,13 +580,9 @@ class CTABGANSynthesizer:
         self.epochs = epochs
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.generator = None
-        self.tau = 4
-        self.activate_scale = 4
 
-    def fit(self, data_prep, train_data=pd.DataFrame, eval_data=pd.DataFrame, categorical=[], mixed={}, type={}):
-
-        eval_data_df = eval_data
-
+    def fit(self, train_data=pd.DataFrame, categorical=[], mixed={}, type={}):
+        
         # obtaining the column index of the target column used for ML tasks
         problem_type = None
         target_index = None
@@ -640,7 +597,6 @@ class CTABGANSynthesizer:
         self.transformer = DataTransformer(train_data=train_data, categorical_list=categorical, mixed_dict=mixed)
         self.transformer.fit() 
         train_data = self.transformer.transform(train_data.values)
-        eval_data = self.transformer.transform(eval_data.values)
         # storing column size of the transformed training data
         data_dim = self.transformer.output_dim
         
@@ -669,19 +625,12 @@ class CTABGANSynthesizer:
         # constructing the generator and discriminator networks
         layers_G = determine_layers_gen(self.gside, self.random_dim+self.cond_generator.n_opt, self.num_channels)
         layers_D = determine_layers_disc(self.dside, self.num_channels)
-
-
-        self.generator = Generator_transformer().to(self.device)
-        # self.generator = Generator(layers_G).to(self.device)
-
-        discriminator = Discriminator_transformer().to(self.device)
-        # discriminator = Discriminator(layers_D).to(self.device)
+        self.generator = Generator(layers_G).to(self.device)
+        discriminator = Discriminator(layers_D).to(self.device)
         
         # assigning the respective optimizers for the generator and discriminator networks
         optimizer_params = dict(lr=2e-4, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale)
-        optimizer_params_classifier = dict(lr=1e-5)
         optimizerG = Adam(self.generator.parameters(), **optimizer_params)
-        optimizerGC = Adam(self.generator.parameters(), **optimizer_params)
         optimizerD = Adam(discriminator.parameters(), **optimizer_params)
 
        
@@ -693,8 +642,7 @@ class CTABGANSynthesizer:
             st_ed= get_st_ed(target_index,self.transformer.output_info)
             # configuring the classifier network and it's optimizer accordingly 
             classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
-            classifier_save = copy.deepcopy(classifier)
-            optimizerC = optim.Adam(classifier.parameters(),**optimizer_params_classifier)
+            optimizerC = optim.Adam(classifier.parameters(),**optimizer_params)
         
         # initializing learnable parameters of the discrimnator and generator networks  
         self.generator.apply(weights_init)
@@ -706,160 +654,12 @@ class CTABGANSynthesizer:
         
         # initiating the training by computing the number of iterations per epoch
         steps_per_epoch = max(1, len(train_data) // self.batch_size)
-
-        best_real = 0
-        best_fake = 0
-
-
-
-
-        if problem_type:
-            for i in range(15000):
-                samples = random.sample(range(train_data.shape[0]), self.batch_size)
-                train_data_unit = train_data[samples]
-                train_data_unit = torch.from_numpy(train_data_unit.astype('float32')).to(self.device)
-                # train_data_unit = apply_activate(train_data_unit, self.transformer.output_info, tau=self.tau,
-                #                       activate_scale=self.activate_scale)
-                train_data_unit = train_data_unit + 0.5*torch.randn_like(train_data_unit)
-                if (st_ed[1] - st_ed[0]) == 2:
-                    c_loss = BCELoss()
-                else:
-                    c_loss = CrossEntropyLoss()
-                optimizerC.zero_grad()
-                classifier.train()
-                train_data_unit_pre, train_data_unit_label = classifier(train_data_unit)
-                if (st_ed[1] - st_ed[0]) == 2:
-                    train_data_unit_label = train_data_unit_label.type_as(train_data_unit_pre)
-                loss_cc = c_loss(train_data_unit_pre, train_data_unit_label)
-                loss_cc.backward()
-                optimizerC.step()
-                if i % 200 == 0:
-                    classifier.eval()
-                    eval_data_temp = torch.from_numpy(eval_data.astype('float32')).to(self.device)
-                    # eval_data_temp = apply_activate(eval_data_temp, self.transformer.output_info, tau=self.tau,
-                    #                                  activate_scale=self.activate_scale)
-                    eval_pre, eval_label = classifier(eval_data_temp)
-                    sorted_indices = torch.argsort(eval_pre)
-                    sorted_labels = eval_label[sorted_indices]
-                    n_positives = torch.cumsum(sorted_labels, dim=0)
-                    n_negatives = torch.arange(1, n_positives.shape[0] + 1, device=self.device) - n_positives
-                    cum_pos_ratio = n_positives / n_positives[-1]
-                    cum_neg_ratio = n_negatives / n_negatives[-1]
-                    KS = torch.max(cum_neg_ratio - cum_pos_ratio)
-                    print(i, KS.item())
-                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                        f.write(f'{i} {KS.item()}\n')
-                    if best_real < KS.item():
-                        classifier_save = copy.deepcopy(classifier)
-                        best_real = KS.item()
-                        print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                        with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                            f.write(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
-
-
-
-        for epoch in tqdm(range(self.epochs)):
-
-
-
-            class Conv_Relu_Conv(torch.nn.Module):
-                def __init__(self, in_dims, hidden_dims, out_dims):
-                    super(Conv_Relu_Conv, self).__init__()
-                    self.fc0 = nn.Linear(in_dims, hidden_dims)
-                    self.fc1 = nn.Linear(hidden_dims, out_dims)
-
-                def forward(self, input):
-                    input = F.relu(self.fc0(input))
-                    input = self.fc1(input)
-                    return input
-
-            sample = self.sample(61240,use_saved_model=False)
-            import torch.nn as nn
-            import torch.nn.functional as F
-
-            syn = data_prep.inverse_prep(sample)
-            fake_train_data = torch.from_numpy(syn.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
-            # fake_train_label = torch.from_numpy(pd.get_dummies(syn.bad).values[:, 1]).to(self.device)
-            fake_train_label = torch.from_numpy(syn.bad.values.astype(np.int64)).to(self.device)
-            test_classifier = Conv_Relu_Conv(fake_train_data.shape[1], 512, 2).to(self.device)
-            eval_data_data = torch.from_numpy(eval_data_df.drop(['bad'], axis=1).values.astype(np.float32)).to(torch.float32).to(self.device)
-            eval_label = torch.from_numpy(pd.get_dummies(eval_data_df.bad).values[:, 1]).to(self.device)
-
-            # fake_train_data = self.transformer.transform(sample)
-            # fake_train_data = torch.from_numpy(fake_train_data.astype('float32')).to(self.device)
-            # test_classifier = Classifier(data_dim,self.class_dim,st_ed).to(self.device)
-
-            test_optimizer = optim.Adam(test_classifier.parameters(),**optimizer_params_classifier)
-            criterion = nn.CrossEntropyLoss()
-
-            for i in range(15000):
-                test_classifier.train()
-
-                samples = random.sample(range(fake_train_data.shape[0]), self.batch_size)
-
-                test_optimizer.zero_grad()
-                fake_train_data_unit = fake_train_data[samples]
-                fake_train_label_unit = fake_train_label[samples]
-                output = test_classifier(fake_train_data_unit)
-                loss = criterion(output, fake_train_label_unit)
-
-                # fake_train_data_unit = fake_train_data[samples]
-                # test_optimizer.zero_grad()
-                # fake_train_data_unit_pre, fake_train_data_unit_label = test_classifier(fake_train_data_unit)
-                # fake_train_data_unit_label = fake_train_data_unit_label.to(torch.float32)
-                # loss = criterion(fake_train_data_unit_pre, fake_train_data_unit_label)
-
-                loss.backward()
-                test_optimizer.step()
-                if i == 0:
-                    avg_loss = loss.item()
-                else:
-                    avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
-                if i % 200 == 0:
-                    test_classifier.eval()
-                    print(i, avg_loss)
-                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log','a') as f:
-                        f.write(f'{i} {avg_loss}\n')
-
-                    eval_pre = test_classifier(eval_data_data)
-                    eval_pre = torch.exp(eval_pre)
-                    eval_pre = eval_pre[:, 1] / (eval_pre[:, 0] + eval_pre[:, 1])
-
-                    # eval_pre, eval_label = test_classifier(torch.from_numpy(eval_data.astype('float32')).to(self.device))
-                    sorted_indices = torch.argsort(eval_pre)
-                    sorted_labels = eval_label[sorted_indices]
-                    n_positives = torch.cumsum(sorted_labels, dim=0)
-                    n_negatives = torch.arange(1, n_positives.shape[0] + 1,device=self.device) - n_positives
-                    cum_pos_ratio = n_positives / n_positives[-1]
-                    cum_neg_ratio = n_negatives / n_negatives[-1]
-                    KS = torch.max(cum_neg_ratio - cum_pos_ratio)
-                    print(KS.item())
-                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log','a') as f:
-                        f.write(f'{KS.item()}\n')
-                    if best_fake < KS.item():
-                        best_fake = KS.item()
-                        print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-                        self.generator_saved = copy.deepcopy(self.generator)
-                        syn.to_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_fake.csv', index=False)
-                        with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                            f.write(f'@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n')
-
-
-
-
-
-
-
-            for iteration in range(steps_per_epoch):
-
-                if iteration%10==0:
-                    print(epoch,iteration)
-                    with open('/home/ec2-user/SageMaker/CTAB-GAN/result/log.log', 'a') as f:
-                        f.write(f'{epoch} {iteration}\n')
-
-                # sampling noise vectors using a standard normal distribution
+        for i in tqdm(range(self.epochs)):
+            for _ in range(steps_per_epoch):
+                
+                # sampling noise vectors using a standard normal distribution 
                 noisez = torch.randn(self.batch_size, self.random_dim, device=self.device)
-                # sampling conditional vectors
+                # sampling conditional vectors 
                 condvec = self.cond_generator.sample_train(self.batch_size)
                 c, m, col, opt = condvec
                 c = torch.from_numpy(c).to(self.device)
@@ -868,47 +668,36 @@ class CTABGANSynthesizer:
                 noisez = torch.cat([noisez, c], dim=1)
                 noisez =  noisez.view(self.batch_size,self.random_dim+self.cond_generator.n_opt,1,1)
 
-                # sampling real data according to the conditional vectors and shuffling it before feeding to discriminator to isolate conditional loss on generator
+                # sampling real data according to the conditional vectors and shuffling it before feeding to discriminator to isolate conditional loss on generator    
                 perm = np.arange(self.batch_size)
                 np.random.shuffle(perm)
                 real = data_sampler.sample(self.batch_size, col[perm], opt[perm])
                 real = torch.from_numpy(real.astype('float32')).to(self.device)
-                # real = apply_activate(real, self.transformer.output_info, tau=self.tau,
-                #                       activate_scale=self.activate_scale)
-                real = real + 0.5*torch.randn_like(real)
-
-
+                
                 # storing shuffled ordering of the conditional vectors
                 c_perm = c[perm]
                 # generating synthetic data as an image
                 fake = self.generator(noisez)
-
-
                 # converting it into the tabular domain as per format of the trasformed training data
-                # faket = self.Gtransformer.inverse_transform(fake)
+                faket = self.Gtransformer.inverse_transform(fake)
                 # applying final activation on the generated data (i.e., tanh for numeric and gumbel-softmax for categorical)
-                # fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
-                #                       activate_scale=self.activate_scale)
-                fakeact = fake
+                fakeact = apply_activate(faket, self.transformer.output_info)
 
-                # the generated data is then concatenated with the corresponding condition vectors
+                # the generated data is then concatenated with the corresponding condition vectors 
                 fake_cat = torch.cat([fakeact, c], dim=1)
-                # the real data is also similarly concatenated with corresponding conditional vectors
+                # the real data is also similarly concatenated with corresponding conditional vectors    
                 real_cat = torch.cat([real, c_perm], dim=1)
+                
+                # transforming the real and synthetic data into the image domain for feeding it to the discriminator
+                real_cat_d = self.Dtransformer.transform(real_cat)
+                fake_cat_d = self.Dtransformer.transform(fake_cat)
 
-                # executing the gradient update step for the discriminator
+                # executing the gradient update step for the discriminator    
                 optimizerD.zero_grad()
-
-                # # transforming the real and synthetic data into the image domain for feeding it to the discriminator
-                # real_cat_d = self.Dtransformer.transform(real_cat)
-                # fake_cat_d = self.Dtransformer.transform(fake_cat)
-                # # computing the probability of the discriminator to correctly classify real samples hence y_real should ideally be close to 1
-                # y_real,_ = discriminator(real_cat_d)
-                # # computing the probability of the discriminator to correctly classify fake samples hence y_fake should ideally be close to 0
-                # y_fake,_ = discriminator(fake_cat_d)
-                y_real,_ = discriminator(real_cat)
-                y_fake,_ = discriminator(fake_cat)
-
+                # computing the probability of the discriminator to correctly classify real samples hence y_real should ideally be close to 1
+                y_real,_ = discriminator(real_cat_d)
+                # computing the probability of the discriminator to correctly classify fake samples hence y_fake should ideally be close to 0
+                y_fake,_ = discriminator(fake_cat_d)
                 # computing the loss to essentially maximize the log likelihood of correctly classifiying real and fake samples as log(D(x))+log(1−D(G(z)))
                 # or equivalently minimizing the negative of log(D(x))+log(1−D(G(z))) as done below
                 loss_d = (-(torch.log(y_real + 1e-4).mean()) - (torch.log(1. - y_fake + 1e-4).mean()))
@@ -926,75 +715,82 @@ class CTABGANSynthesizer:
                 noisez = torch.cat([noisez, c], dim=1)
                 noisez =  noisez.view(self.batch_size,self.random_dim+self.cond_generator.n_opt,1,1)
 
-                # executing the gradient update step for the generator
+                # executing the gradient update step for the generator    
                 optimizerG.zero_grad()
 
                 # similarly generating synthetic data and applying final activation
                 fake = self.generator(noisez)
-                # faket = self.Gtransformer.inverse_transform(fake)
-                # fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
-                #                       activate_scale=self.activate_scale)
-                fakeact = fake
+                faket = self.Gtransformer.inverse_transform(fake)
+                fakeact = apply_activate(faket, self.transformer.output_info)
                 # concatenating conditional vectors and converting it to the image domain to be fed to the discriminator
-                fake_cat = torch.cat([fakeact, c], dim=1)
+                fake_cat = torch.cat([fakeact, c], dim=1) 
+                fake_cat = self.Dtransformer.transform(fake_cat)
 
-                # fake_cat = self.Dtransformer.transform(fake_cat)
-                # # computing the probability of the discriminator classifiying fake samples as real
-                # # along with feature representaions of fake data resulting from the penultimate layer
-                # y_fake,info_fake = discriminator(fake_cat)
-                # # extracting feature representation of real data from the penultimate layer of the discriminator
-                # _,info_real = discriminator(real_cat_d)
+                # computing the probability of the discriminator classifiying fake samples as real 
+                # along with feature representaions of fake data resulting from the penultimate layer 
                 y_fake,info_fake = discriminator(fake_cat)
-                _,info_real = discriminator(real_cat)
-                loss_g = -(torch.log(y_fake + 1e-4).mean())
-
+                # extracting feature representation of real data from the penultimate layer of the discriminator 
+                _,info_real = discriminator(real_cat_d)
                 # computing the conditional loss to ensure the generator generates data records with the chosen category as per the conditional vector
-                cross_entropy = cond_loss(fake, self.transformer.output_info, c, m)
-
-                # computing the loss to train the generator where we want y_fake to be close to 1 to fool the discriminator
-                # and cross_entropy to be close to 0 to ensure generator's output matches the conditional vector
-                g = loss_g + cross_entropy
+                cross_entropy = cond_loss(faket, self.transformer.output_info, c, m)
+                
+                # computing the loss to train the generator where we want y_fake to be close to 1 to fool the discriminator 
+                # and cross_entropy to be close to 0 to ensure generator's output matches the conditional vector  
+                g = -(torch.log(y_fake + 1e-4).mean()) + cross_entropy
                 # in order to backprop the gradient of separate losses w.r.t to the learnable weight of the network independently
-                # we may use retain_graph=True in backward() method in the first back-propagated loss
+                # we may use retain_graph=True in backward() method in the first back-propagated loss 
                 # to maintain the computation graph to execute the second backward pass efficiently
                 g.backward(retain_graph=True)
                 # computing the information loss by comparing means and stds of real/fake feature representations extracted from discriminator's penultimate layer
                 loss_mean = torch.norm(torch.mean(info_fake.view(self.batch_size,-1), dim=0) - torch.mean(info_real.view(self.batch_size,-1), dim=0), 1)
                 loss_std = torch.norm(torch.std(info_fake.view(self.batch_size,-1), dim=0) - torch.std(info_real.view(self.batch_size,-1), dim=0), 1)
-                loss_info = loss_mean + loss_std
+                loss_info = loss_mean + loss_std 
                 # computing the finally accumulated gradients
                 loss_info.backward()
                 # executing the backward step to update the weights
                 optimizerG.step()
 
-                # the classifier module is used in case there is a target column associated with ML tasks
+                # the classifier module is used in case there is a target column associated with ML tasks 
                 if problem_type:
-
+                    
+                    c_loss = None
+                    # in case of binary classification, the binary cross entropy loss is used 
+                    if (st_ed[1] - st_ed[0])==2:
+                        c_loss = BCELoss()
+                    # in case of multi-class classification, the standard cross entropy loss is used
+                    else: c_loss = CrossEntropyLoss() 
+                    
+                    # updating the weights of the classifier
+                    optimizerC.zero_grad()
+                    # computing classifier's target column predictions on the real data along with returning corresponding true labels
+                    real_pre, real_label = classifier(real)
+                    if (st_ed[1] - st_ed[0])==2:
+                        real_label = real_label.type_as(real_pre)
+                    # computing the loss to train the classifier so that it can perform well on the real data
+                    loss_cc = c_loss(real_pre, real_label)
+                    loss_cc.backward()
+                    optimizerC.step()
+                    
                     # updating the weights of the generator
-                    optimizerGC.zero_grad()
-                    classifier_save.eval()
+                    optimizerG.zero_grad()
                     # generate synthetic data and apply the final activation
                     fake = self.generator(noisez)
-                    # faket = self.Gtransformer.inverse_transform(fake)
-                    # fakeact = apply_activate(faket, self.transformer.output_info, tau=self.tau,
-                    #                   activate_scale=self.activate_scale)
-                    fakeact = fake
+                    faket = self.Gtransformer.inverse_transform(fake)
+                    fakeact = apply_activate(faket, self.transformer.output_info)
                     # computing classifier's target column predictions on the fake data along with returning corresponding true labels
-                    fake_pre, fake_label = classifier_save(fakeact)
+                    fake_pre, fake_label = classifier(fakeact)
                     if (st_ed[1] - st_ed[0])==2:
                         fake_label = fake_label.type_as(fake_pre)
                     # computing the loss to train the generator to improve semantic integrity between target column and rest of the data
                     loss_cg = c_loss(fake_pre, fake_label)
                     loss_cg.backward()
-                    optimizerGC.step()
-
-                if iteration%10==0:
-                    # print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item(),loss_cg.item())
-                    # print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_cg.item())
-                    print(loss_d.item(),loss_g.item(),cross_entropy.item(),loss_mean.item(),loss_std.item())
-
-    def sample(self, n, use_saved_model):
+                    optimizerG.step()
+                    
+                            
+    def sample(self, n):
         
+        # turning the generator into inference mode to effectively use running statistics in batch norm layers
+        self.generator.eval()
         # column information associated with the transformer fit to the pre-processed training data
         output_info = self.transformer.output_info
         
@@ -1009,14 +805,9 @@ class CTABGANSynthesizer:
             c = torch.from_numpy(c).to(self.device)
             noisez = torch.cat([noisez, c], dim=1)
             noisez =  noisez.view(self.batch_size,self.random_dim+self.cond_generator.n_opt,1,1)
-            if use_saved_model:
-                fake = self.generator_saved(noisez)
-            else:
-                fake = self.generator(noisez)
-            # faket = self.Gtransformer.inverse_transform(fake)
-            # fakeact = apply_activate(faket,output_info,tau=self.tau,
-            #                           activate_scale=self.activate_scale)
-            fakeact = fake
+            fake = self.generator(noisez)
+            faket = self.Gtransformer.inverse_transform(fake)
+            fakeact = apply_activate(faket,output_info)
             data.append(fakeact.detach().cpu().numpy())
 
         data = np.concatenate(data, axis=0)
