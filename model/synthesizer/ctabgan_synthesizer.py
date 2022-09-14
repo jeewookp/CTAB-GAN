@@ -404,13 +404,16 @@ class Discriminator_transformer(Module):
 class Generator_transformer(Module):
     def __init__(self):
         super(Generator_transformer, self).__init__()
-        encoder_layer = nn.TransformerEncoderLayer(d_model=168, nhead=8)
+        self.ouput_layer0 = nn.Linear(168, 512)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
-        self.ouput_layer = nn.Linear(168, 68)
+        self.ouput_layer1 = nn.Linear(512, 68)
 
     def forward(self, input):
-        output = self.transformer_encoder(input.squeeze(2).squeeze(2).unsqueeze(0)).squeeze(0)
-        output = self.ouput_layer(output)
+        # output = self.transformer_encoder(input.squeeze(2).squeeze(2).unsqueeze(0)).squeeze(0)
+        output = self.ouput_layer0(input.squeeze(2).squeeze(2))
+        output = self.transformer_encoder(output.unsqueeze(0)).squeeze(0)
+        output = self.ouput_layer1(output)
 
         return output
 
