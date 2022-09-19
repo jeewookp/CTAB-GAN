@@ -382,7 +382,7 @@ class Discriminator(Module):
         self.transformer = transformer_layer(side)
 
     def forward(self, input):
-        # input = self.transformer(input)
+        input = self.transformer(input)
         return (self.seq(input)), self.seq_info(input)
 
 
@@ -458,7 +458,7 @@ class Generator(Module):
 
     def forward(self, input):
         input = self.seq(input)
-        # input = self.transformer(input)
+        input = self.transformer(input)
         return input
 
 def determine_layers_gen(side, random_dim, num_channels):
