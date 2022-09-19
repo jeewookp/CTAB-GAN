@@ -601,7 +601,7 @@ class CTABGANSynthesizer:
 
     def fit(self, data_prep, type={}):
         train_data = data_prep.df
-        categorical = data_prep.column_types["categorical"],
+        categorical = data_prep.column_types["categorical"]
         mixed = data_prep.column_types["mixed"]
         
         # obtaining the column index of the target column used for ML tasks
