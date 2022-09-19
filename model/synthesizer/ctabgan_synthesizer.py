@@ -9,7 +9,7 @@ from torch.nn import (Dropout, LeakyReLU, Linear, Module, ReLU, Sequential,
 Conv2d, ConvTranspose2d, BatchNorm2d, Sigmoid, init, BCELoss, CrossEntropyLoss,SmoothL1Loss)
 from model.synthesizer.transformer import ImageTransformer,DataTransformer
 from tqdm import tqdm
-
+import torch.nn as nn
 
 def random_choice_prob_index_sampling(probs,col_idx):
     
@@ -375,13 +375,67 @@ class Discriminator(Module):
     
     """
     
-    def __init__(self, layers):
+    def __init__(self, layers, side):
         super(Discriminator, self).__init__()
         self.seq = Sequential(*layers)
         self.seq_info = Sequential(*layers[:len(layers)-2])
+        self.transformer = transformer_layer(side)
 
     def forward(self, input):
+        input = self.transformer(input)
         return (self.seq(input)), self.seq_info(input)
+
+
+def determine_layers_disc(side, num_channels):
+    """
+    This function describes the layers of the discriminator network as per DCGAN (https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html)
+
+    Inputs:
+    1) side -> height/width of the input fed to the discriminator
+    2) num_channels -> no. of channels used to decide the size of respective hidden layers
+
+    Outputs:
+    1) layers_D -> layers of the discriminator network
+
+    """
+
+    # computing the dimensionality of hidden layers
+    layer_dims = [(1, side), (num_channels, side // 2)]
+
+    while layer_dims[-1][1] > 3 and len(layer_dims) < 4:
+        # the number of channels increases by a factor of 2 whereas the height/width decreases by the same factor with each layer
+        layer_dims.append((layer_dims[-1][0] * 2, layer_dims[-1][1] // 2))
+
+    # constructing the layers of the discriminator network based on the recommendations mentioned in https://arxiv.org/abs/1511.06434
+    layers_D = []
+    for prev, curr in zip(layer_dims, layer_dims[1:]):
+        layers_D += [
+            Conv2d(prev[0], curr[0], 4, 2, 1, bias=False),
+            BatchNorm2d(curr[0]),
+            LeakyReLU(0.2, inplace=True)
+        ]
+    # last layer reduces the output to a single numeric value which is squashed to a probabability using sigmoid function
+    layers_D += [
+        Conv2d(layer_dims[-1][0], 1, layer_dims[-1][1], 1, 0),
+        Sigmoid()
+    ]
+
+    return layers_D
+
+class transformer_layer(Module):
+    def __init__(self, side):
+        super(transformer_layer, self).__init__()
+        self.side = side
+        encoder_layer = nn.TransformerEncoderLayer(d_model=side**2, nhead=8)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
+        self.ouput_layer = nn.Linear(side**2,1)
+
+    def forward(self, input):
+        b,_,_,_ = input.shape
+        input = input.view(1,b,self.side**2)
+        output = self.transformer_encoder(input).squeeze(0) # b,s**2
+        output = output.view(b,1,self.side,self.side)
+        return output
 
 class Generator(Module):
     
@@ -397,49 +451,13 @@ class Generator(Module):
 
     """
     
-    def __init__(self, layers):
+    def __init__(self, layers, side):
         super(Generator, self).__init__()
+        self.transformer = transformer_layer(side)
         self.seq = Sequential(*layers)
 
     def forward(self, input):
-        return self.seq(input)
-
-def determine_layers_disc(side, num_channels):
-    
-    """
-    This function describes the layers of the discriminator network as per DCGAN (https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html)
-
-    Inputs:
-    1) side -> height/width of the input fed to the discriminator
-    2) num_channels -> no. of channels used to decide the size of respective hidden layers 
-
-    Outputs:
-    1) layers_D -> layers of the discriminator network
-    
-    """
-
-    # computing the dimensionality of hidden layers 
-    layer_dims = [(1, side), (num_channels, side // 2)]
-
-    while layer_dims[-1][1] > 3 and len(layer_dims) < 4:
-        # the number of channels increases by a factor of 2 whereas the height/width decreases by the same factor with each layer
-        layer_dims.append((layer_dims[-1][0] * 2, layer_dims[-1][1] // 2))
-
-    # constructing the layers of the discriminator network based on the recommendations mentioned in https://arxiv.org/abs/1511.06434 
-    layers_D = []
-    for prev, curr in zip(layer_dims, layer_dims[1:]):
-        layers_D += [
-            Conv2d(prev[0], curr[0], 4, 2, 1, bias=False),
-            BatchNorm2d(curr[0]),
-            LeakyReLU(0.2, inplace=True)
-        ]
-    # last layer reduces the output to a single numeric value which is squashed to a probabability using sigmoid function
-    layers_D += [
-        Conv2d(layer_dims[-1][0], 1, layer_dims[-1][1], 1, 0), 
-        Sigmoid() 
-    ]
-    
-    return layers_D
+        return self.transformer(self.seq(input))
 
 def determine_layers_gen(side, random_dim, num_channels):
     
@@ -581,7 +599,10 @@ class CTABGANSynthesizer:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.generator = None
 
-    def fit(self, train_data=pd.DataFrame, categorical=[], mixed={}, type={}):
+    def fit(self, data_prep, type={}):
+        train_data = data_prep.df
+        categorical = data_prep.column_types["categorical"],
+        mixed = data_prep.column_types["mixed"]
         
         # obtaining the column index of the target column used for ML tasks
         problem_type = None
@@ -625,8 +646,8 @@ class CTABGANSynthesizer:
         # constructing the generator and discriminator networks
         layers_G = determine_layers_gen(self.gside, self.random_dim+self.cond_generator.n_opt, self.num_channels)
         layers_D = determine_layers_disc(self.dside, self.num_channels)
-        self.generator = Generator(layers_G).to(self.device)
-        discriminator = Discriminator(layers_D).to(self.device)
+        self.generator = Generator(layers_G, self.gside).to(self.device)
+        discriminator = Discriminator(layers_D, self.dside).to(self.device)
         
         # assigning the respective optimizers for the generator and discriminator networks
         optimizer_params = dict(lr=2e-4, betas=(0.5, 0.9), eps=1e-3, weight_decay=self.l2scale)
@@ -655,6 +676,11 @@ class CTABGANSynthesizer:
         # initiating the training by computing the number of iterations per epoch
         steps_per_epoch = max(1, len(train_data) // self.batch_size)
         for i in tqdm(range(self.epochs)):
+
+            sample = self.sample(len(train_data))
+            syn = data_prep.inverse_prep(sample)
+            syn.to_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_fake.csv', index=False)
+
             for _ in range(steps_per_epoch):
                 
                 # sampling noise vectors using a standard normal distribution 

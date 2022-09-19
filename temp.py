@@ -18,8 +18,7 @@ categorical_columns = list(df_train.columns)
 data_prep = DataPrep(raw_df=df_train, categorical=categorical_columns, log=[], mixed={}, integer=[],
                      type={"Classification": 'bad'})
 
-synthesizer.fit(train_data=data_prep.df, categorical = data_prep.column_types["categorical"],
-                mixed = data_prep.column_types["mixed"], type={"Classification": 'bad'})
+synthesizer.fit(data_prep=data_prep, type={"Classification": 'bad'})
 
 
 sample = synthesizer.sample(len(df_train))
