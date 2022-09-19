@@ -616,6 +616,7 @@ class CTABGANSynthesizer:
         # transforming pre-processed training data according to different data types 
         # i.e., mode specific normalisation for numeric and mixed columns and one-hot-encoding for categorical columns
         self.transformer = DataTransformer(train_data=train_data, categorical_list=categorical, mixed_dict=mixed)
+        print(self.transformer.meta)
         self.transformer.fit() 
         train_data = self.transformer.transform(train_data.values)
         # storing column size of the transformed training data
