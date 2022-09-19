@@ -432,8 +432,8 @@ class transformer_layer(Module):
 
     def forward(self, input):
         b,_,_,_ = input.shape
-        input = input.view(1,b,self.side**2)
-        output = self.transformer_encoder(input).squeeze(0) # b,s**2
+        output = input.view(1,b,self.side**2)
+        output = self.transformer_encoder(output).squeeze(0) # b,s**2
         output = output.view(b,1,self.side,self.side)
         return input + output
 
