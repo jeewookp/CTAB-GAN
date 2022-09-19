@@ -9,7 +9,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 
-epochs = 150
+epochs = 10
 
 synthesizer = CTABGANSynthesizer(epochs = epochs)
 df_train = pd.read_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_dev.csv')

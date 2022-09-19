@@ -4,7 +4,7 @@
     <list default="true" id="e42ee7ad-45de-467f-8fb6-59b042857a76" name="Changes" comment="init">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/first_data/ML_data_fake.csv" beforeDir="false" afterPath="$PROJECT_DIR$/first_data/ML_data_fake.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/synthesizer/ctabgan_synthesizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/synthesizer/ctabgan_synthesizer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/temp.py" beforeDir="false" afterPath="$PROJECT_DIR$/temp.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,13 +50,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1661854033011</updated>
-    </task>
-    <task id="LOCAL-00048" summary="init">
-      <created>1663046530514</created>
-      <option name="number" value="00048" />
-      <option name="presentableId" value="LOCAL-00048" />
-      <option name="project" value="LOCAL" />
-      <updated>1663046530514</updated>
     </task>
     <task id="LOCAL-00049" summary="init">
       <created>1663067274542</created>
@@ -394,7 +387,14 @@
       <option name="project" value="LOCAL" />
       <updated>1663560683330</updated>
     </task>
-    <option name="localTasksCounter" value="97" />
+    <task id="LOCAL-00097" summary="init">
+      <created>1663561358472</created>
+      <option name="number" value="00097" />
+      <option name="presentableId" value="LOCAL-00097" />
+      <option name="project" value="LOCAL" />
+      <updated>1663561358472</updated>
+    </task>
+    <option name="localTasksCounter" value="98" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
