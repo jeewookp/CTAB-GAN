@@ -382,7 +382,7 @@ class Discriminator(Module):
         self.transformer = transformer_layer(side)
 
     def forward(self, input):
-        input = self.transformer(input)
+        # input = self.transformer(input)
         return (self.seq(input)), self.seq_info(input)
 
 

@@ -48,10 +48,6 @@ Y_val1 = Y_val[val1_selected_indices]
 x_val2 = x_val[val2_selected_indices]
 Y_val2 = Y_val[val2_selected_indices]
 
-df_fake = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_fake.csv')
-x_fake = torch.from_numpy(df_fake.drop(['bad'], axis=1).values).to(torch.float32)
-Y_fake = torch.from_numpy(pd.get_dummies(df_fake.bad).values[:,0])
-
 
 classifier = Conv_Relu_Conv(x_train.shape[1],512,2)
 optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
@@ -117,28 +113,55 @@ for i in range(3000):
             print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
 
-x_fake_val1 = torch.cat([x_fake,x_val1],dim=0)
-Y_fake_val1 = torch.cat([Y_fake,Y_val1],dim=0)
-classifier = Conv_Relu_Conv(x_train.shape[1],512,2)
+
+classifier = copy.deepcopy(classifier_save)
+precision_matrices = {}
+origin_params = {}
+for n, p in copy.deepcopy({n: p for n, p in classifier.named_parameters()}).items():
+    precision_matrices[n] = 0
+    origin_params[n] = p
+classifier.eval()
+for i in range((x_train.shape[0]-1)//batch_size+1):
+    x_train_unit = x_train[i*batch_size:(i+1)*batch_size]
+    Y_train_unit = Y_train[i*batch_size:(i+1)*batch_size]
+    classifier.zero_grad()
+    output = classifier(x_train_unit)
+    loss = criterion(output,Y_train_unit)
+    loss.backward()
+    for n, p in classifier.named_parameters():
+        precision_matrices[n] += p.grad.data ** 2 / ((x_train.shape[0]-1)//batch_size+1)
+
+precision_matrices = {n: p for n, p in precision_matrices.items()}
+
+
+importance = 1e5
 optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
 best = 0
 for i in range(30000):
     classifier.train()
-    samples = random.sample(range(x_fake_val1.shape[0]),batch_size)
-    x_train_unit = x_fake_val1[samples]
-    Y_train_unit = Y_fake_val1[samples]
+    samples = random.sample(range(x_val1.shape[0]),batch_size)
+    x_train_unit = x_val1[samples]
+    Y_train_unit = Y_val1[samples]
     output = classifier(x_train_unit)
     loss = criterion(output,Y_train_unit)
+
+    loss_ewc = 0
+    for n, p in classifier.named_parameters():
+        _loss = precision_matrices[n] * (p - origin_params[n]) ** 2
+        loss_ewc += _loss.sum()
+
     classifier.zero_grad()
-    loss.backward()
+    (loss+importance * loss_ewc).backward()
     optimizer.step()
     if i==0:
         avg_loss = loss.item()
+        avg_loss_ewc = loss_ewc.item()
     else:
         avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
+        avg_loss_ewc = 0.999 * avg_loss_ewc + 0.001 * loss_ewc.item()
     if i%1000==0:
         classifier.eval()
-        print(i, avg_loss)
+        print(i, avg_loss, avg_loss_ewc)
 
         KS_train = evaluate_function(x_train,Y_train,classifier)
         KS_val1 = evaluate_function(x_val1,Y_val1,classifier)
@@ -148,5 +171,44 @@ for i in range(30000):
         if best<KS_val2:
             best = KS_val2
             print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+
+
+
+
+
+# df_fake = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_fake.csv')
+# x_fake = torch.from_numpy(df_fake.drop(['bad'], axis=1).values).to(torch.float32)
+# Y_fake = torch.from_numpy(pd.get_dummies(df_fake.bad).values[:,0])
+# x_fake_val1 = torch.cat([x_fake,x_val1],dim=0)
+# Y_fake_val1 = torch.cat([Y_fake,Y_val1],dim=0)
+# classifier = Conv_Relu_Conv(x_train.shape[1],512,2)
+# optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
+# best = 0
+# for i in range(30000):
+#     classifier.train()
+#     samples = random.sample(range(x_fake_val1.shape[0]),batch_size)
+#     x_train_unit = x_fake_val1[samples]
+#     Y_train_unit = Y_fake_val1[samples]
+#     output = classifier(x_train_unit)
+#     loss = criterion(output,Y_train_unit)
+#     classifier.zero_grad()
+#     loss.backward()
+#     optimizer.step()
+#     if i==0:
+#         avg_loss = loss.item()
+#     else:
+#         avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
+#     if i%1000==0:
+#         classifier.eval()
+#         print(i, avg_loss)
+#
+#         KS_train = evaluate_function(x_train,Y_train,classifier)
+#         KS_val1 = evaluate_function(x_val1,Y_val1,classifier)
+#         KS_val2 = evaluate_function(x_val2,Y_val2,classifier)
+#
+#         print(KS_train, KS_val1, KS_val2)
+#         if best<KS_val2:
+#             best = KS_val2
+#             print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
 
