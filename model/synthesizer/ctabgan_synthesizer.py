@@ -682,6 +682,7 @@ class CTABGANSynthesizer:
             sample = self.sample(len(train_data))
             syn = data_prep.inverse_prep(sample)
             syn.to_csv('/home/ec2-user/SageMaker/CTAB-GAN/first_data/ML_data_fake.csv', index=False)
+            self.generator.train()
 
             for _ in range(steps_per_epoch):
                 
