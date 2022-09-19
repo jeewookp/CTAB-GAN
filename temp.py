@@ -17,7 +17,7 @@ df_train = df_train.drop(['dev_val', 'pk'], axis=1)
 categorical_columns = list(df_train.columns)
 data_prep = DataPrep(raw_df=df_train, categorical=categorical_columns, log=[], mixed={}, integer=[],
                      type={"Classification": 'bad'})
-
+print(categorical_columns)
 synthesizer.fit(data_prep=data_prep, type={"Classification": 'bad'})
 
 
