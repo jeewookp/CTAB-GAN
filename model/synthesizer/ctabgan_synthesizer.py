@@ -435,7 +435,7 @@ class transformer_layer(Module):
         input = input.view(1,b,self.side**2)
         output = self.transformer_encoder(input).squeeze(0) # b,s**2
         output = output.view(b,1,self.side,self.side)
-        return output
+        return input + output
 
 class Generator(Module):
     
