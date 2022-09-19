@@ -8,14 +8,13 @@ for i in range(100):
 
 
 
+df_fake = pd.read_csv("/Users/john/project/CTAB-GAN/first_data/ML_data_fake.csv")
+advert_report_fake = sv.analyze(df_fake)
+advert_report_fake.show_html('./sweetviz_Advertising_fake.html')
 
 df_train = pd.read_csv("/Users/john/project/CTAB-GAN/first_data/ML_data_dev.csv")
 advert_report_train = sv.analyze(df_train)
 advert_report_train.show_html('./sweetviz_Advertising_train.html')
-
-df_fake = pd.read_csv("/Users/john/project/CTAB-GAN/first_data/ML_data_fake.csv")
-advert_report_fake = sv.analyze(df_fake)
-advert_report_fake.show_html('./sweetviz_Advertising_fake.html')
 
 df1 = sv.compare(df_train, df_fake)
 df1.show_html('./sweetviz_Compare.html')
