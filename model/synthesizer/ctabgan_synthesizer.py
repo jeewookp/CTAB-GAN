@@ -644,6 +644,8 @@ class CTABGANSynthesizer:
             if i * i >= col_size_g:
                 self.gside = i
                 break
+
+        print(data_dim,self.cond_generator.n_opt)
 		
         # constructing the generator and discriminator networks
         layers_G = determine_layers_gen(self.gside, self.random_dim+self.cond_generator.n_opt, self.num_channels)
