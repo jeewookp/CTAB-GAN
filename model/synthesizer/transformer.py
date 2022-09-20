@@ -177,6 +177,7 @@ class DataTransformer():
         
         # iterating through column information
         for id_, info in enumerate(self.meta):
+            print(id_, info)
             current = data[:, id_]
             if info['type'] == "continuous":
                 # mode-specific normalization occurs here
