@@ -89,6 +89,7 @@ class DataTransformer():
         # iterating through column information
         for id_, info in enumerate(self.meta):
             if info['type'] == "continuous":
+                print(id_,info)
                 # fitting bgm model  
                 gm = BayesianGaussianMixture(
                     self.n_clusters, 
