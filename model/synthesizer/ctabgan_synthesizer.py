@@ -629,7 +629,7 @@ class CTABGANSynthesizer:
         self.cond_generator = Condvec(train_data, self.transformer.output_info)
 
         # obtaining the desired height/width for converting tabular data records to square images for feeding it to discriminator network 		
-        sides = [4, 8, 16, 24, 32]
+        sides = [4, 8, 16, 24, 32, 40]
         # the discriminator takes the transformed training data concatenated by the corresponding conditional vectors as input
         col_size_d = data_dim + self.cond_generator.n_opt
         for i in sides:
@@ -638,7 +638,7 @@ class CTABGANSynthesizer:
                 break
         
         # obtaining the desired height/width for generating square images from the generator network that can be converted back to tabular domain 		
-        sides = [4, 8, 16, 24, 32]
+        sides = [4, 8, 16, 24, 32, 40]
         col_size_g = data_dim
         for i in sides:
             if i * i >= col_size_g:
