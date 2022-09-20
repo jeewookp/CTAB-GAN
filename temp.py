@@ -62,6 +62,7 @@ train_indices = sorted(list(set(x0.index)-set(val_indices)))
 x0_train = x0.loc[train_indices]
 x0_train = x0_train.drop(['val_gb_new'], axis=1)
 
+
 categorical = []
 integer = []
 for col in x0_train.columns:
