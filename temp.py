@@ -62,8 +62,16 @@ train_indices = sorted(list(set(x0.index)-set(val_indices)))
 x0_train = x0.loc[train_indices]
 x0_train = x0_train.drop(['val_gb_new'], axis=1)
 
+categorical = []
+integer = []
+for col in x0_train.columns:
+    n_unique = x0_train[col].nunique()
+    if n_unique < 10:
+        categorical.append(col)
+    else:
+        integer.append(col)
 
-data_prep = DataPrep(raw_df=x0_train, categorical=[], log=[], mixed={}, integer=[],
+data_prep = DataPrep(raw_df=x0_train, categorical=categorical, log=[], mixed={}, integer=integer,
                      type={"Classification": 'target_6m'})
 synthesizer.fit(data_prep=data_prep, type={"Classification": 'target_6m'})
 

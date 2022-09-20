@@ -95,7 +95,7 @@ class DataTransformer():
                     self.n_clusters, 
                     weight_concentration_prior_type='dirichlet_process',
                     weight_concentration_prior=0.001, # lower values result in lesser modes being active
-                    max_iter=100,n_init=1, random_state=42)
+                    max_iter=100,n_init=3, random_state=42)
                 gm.fit(data[:, id_].reshape([-1, 1]))
                 model.append(gm)
                 # keeping only relevant modes that have higher weight than eps and are used to fit the data
