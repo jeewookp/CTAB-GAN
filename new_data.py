@@ -8,6 +8,10 @@ import copy
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import time
+import pickle
+
+with open('/Users/john/project/CTAB-GAN/model/synthesizer.pickle','rb') as read_file:
+    synthesizer = pickle.load(read_file)
 
 class Conv_Relu_Conv(torch.nn.Module):
     def __init__(self, in_dims, hidden_dims, out_dims):
