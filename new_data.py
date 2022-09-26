@@ -169,6 +169,83 @@ for i in range(30000):
             print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
 
+
+
+
+classifier = copy.deepcopy(classifier_save)
+classifier.eval()
+precision_matrices = {}
+origin_params = {}
+for n, p in copy.deepcopy({n: p for n, p in classifier.named_parameters()}).items():
+    precision_matrices[n] = 0
+    origin_params[n] = p.data
+for i in range(x0_train.shape[0]):
+    if i%1000==0:
+        print(i)
+    x_train_unit = x0_train[i:i+1]
+    Y_train_unit = y0_train[i:i+1]
+    classifier.zero_grad()
+    output = classifier(x_train_unit)
+    loss = criterion(output, Y_train_unit)
+    loss.backward()
+    for n, p in classifier.named_parameters():
+        precision_matrices[n] += p.grad.data ** 2
+for n, p in classifier.named_parameters():
+    precision_matrices[n] /= x0_train.shape[0]
+
+with torch.no_grad():
+    y0_fake_inferenced = classifier(x0_fake)
+y0_fake_inferenced = y0_fake_inferenced[:, 1] - y0_fake_inferenced[:, 0]
+y0_fake_inferenced = torch.sigmoid(y0_fake_inferenced)
+x0_fake_1_train = torch.cat([x0_fake,x1_train],dim=0)
+y0_fake_1_train = torch.cat([y0_fake_inferenced,y1_train],dim=0)
+
+importance = 1
+optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-3)
+best = 0
+for i in range(30000):
+    classifier.train()
+    samples = random.sample(range(x0_fake_1_train.shape[0]),batch_size)
+    x_train_unit = x0_fake_1_train[samples]
+    Y_train_unit = y0_fake_1_train[samples]
+    output = classifier(x_train_unit)
+    output = output[:, 1] - output[:, 0]
+    output = torch.sigmoid(output)
+    output = 1e-6 + (1-2e-6)*output
+    loss = -torch.mean(Y_train_unit*torch.log(output)+(1-Y_train_unit)*torch.log(1-output))
+
+    loss_ewc = 0
+    for n, p in classifier.named_parameters():
+        _loss = precision_matrices[n] * (p - origin_params[n]) ** 2
+        loss_ewc += _loss.sum()
+
+    classifier.zero_grad()
+    (loss+importance * loss_ewc).backward()
+    optimizer.step()
+    if i==0:
+        avg_loss = loss.item()
+        avg_loss_ewc = loss_ewc.item()
+    else:
+        avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
+        avg_loss_ewc = 0.999 * avg_loss_ewc + 0.001 * loss_ewc.item()
+    if i%1000==0:
+        classifier.eval()
+        print(i, avg_loss, avg_loss_ewc)
+
+        KS0_val = evaluate_function(x0_val,y0_val,classifier)
+        KS1_val = evaluate_function(x1_val,y1_val,classifier)
+        KS2 = evaluate_function(x2,y2,classifier)
+
+        print(KS0_val, KS1_val, KS2)
+        if best<KS1_val:
+            best = KS1_val
+            print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+
+
+
+
+
+
 classifier = copy.deepcopy(classifier_save)
 classifier.eval()
 with torch.no_grad():

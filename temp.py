@@ -8,6 +8,7 @@ from torch.optim import Adam
 from tqdm import tqdm
 import torch
 import numpy as np
+import pickle
 
 epochs = 150
 
@@ -74,10 +75,15 @@ for col in x0_train.columns:
 
 data_prep = DataPrep(raw_df=x0_train, categorical=categorical, log=[], mixed={}, integer=integer,
                      type={"Classification": 'target_6m'})
-synthesizer.fit(data_prep=data_prep, type={"Classification": 'target_6m'})
+
+with open('model/synthesizer.pickle', 'wb') as save_file:
+    pickle.dump(synthesizer, save_file)
 
 
-sample = synthesizer.sample(10*len(x0_train))
-syn = data_prep.inverse_prep(sample)
-syn.to_csv('first_data/seg200_fake.csv', index=False)
+# synthesizer.fit(data_prep=data_prep, type={"Classification": 'target_6m'})
+#
+#
+# sample = synthesizer.sample(10*len(x0_train))
+# syn = data_prep.inverse_prep(sample)
+# syn.to_csv('first_data/seg200_fake.csv', index=False)
 
