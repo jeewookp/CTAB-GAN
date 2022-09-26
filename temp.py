@@ -77,7 +77,7 @@ data_prep = DataPrep(raw_df=x0_train, categorical=categorical, log=[], mixed={},
 synthesizer.fit(data_prep=data_prep, type={"Classification": 'target_6m'})
 
 
-sample = synthesizer.sample(len(x0_train))
+sample = synthesizer.sample(10*len(x0_train))
 syn = data_prep.inverse_prep(sample)
 syn.to_csv('first_data/seg200_fake.csv', index=False)
 
