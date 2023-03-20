@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import copy
 import random
 from scipy.stats import ks_2samp
+import shutil
 
 def ks_stat(y, yhat):
     return ks_2samp(yhat[y==1], yhat[y!=1]).statistic
@@ -140,6 +141,7 @@ class SoftOrdering1DCNN(nn.Module):
 
 exp_name = 'test'
 save_dir = f'./result/{exp_name}'
+os.makedirs('./result',exist_ok=True)
 os.mkdir(save_dir)
 
 df = pd.read_csv('./preprocessed_df(1).zip')
