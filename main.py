@@ -132,7 +132,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
-df = pd.read_csv('/Users/john/Downloads/preprocessed_df(1).zip')
+df = pd.read_csv('./preprocessed_df(1).zip')
 
 target_name = 'Target_HBS'
 meta_cols = ['val_gb_new', 'sil_2', 'WW', 'hf_score_final', 'num']

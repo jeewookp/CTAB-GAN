@@ -1,16 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e42ee7ad-45de-467f-8fb6-59b042857a76" name="Changes" comment="init">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/first_data/ML_data_fake.csv" beforeDir="false" afterPath="$PROJECT_DIR$/first_data/ML_data_fake.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/synthesizer/ctabgan_synthesizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/synthesizer/ctabgan_synthesizer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/synthesizer/transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/model/synthesizer/transformer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sweetviz_Advertising_fake.html" beforeDir="false" afterPath="$PROJECT_DIR$/sweetviz_Advertising_fake.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sweetviz_Advertising_train.html" beforeDir="false" afterPath="$PROJECT_DIR$/sweetviz_Advertising_train.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sweetviz_visualize.py" beforeDir="false" afterPath="$PROJECT_DIR$/sweetviz_visualize.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/temp.py" beforeDir="false" afterPath="$PROJECT_DIR$/temp.py" afterDir="false" />
-    </list>
+    <list default="true" id="e42ee7ad-45de-467f-8fb6-59b042857a76" name="Changes" comment="init" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
