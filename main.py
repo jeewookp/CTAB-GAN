@@ -194,7 +194,7 @@ for epoch in range(30):
         optimizer.step()
         if i%10==0:
             print(epoch,i,loss.item())
-            with open(f'{save_dir}/log.log', "w") as f:
+            with open(f'{save_dir}/log.log', "a") as f:
                 f.write(f'{epoch} {i} {loss.item()}\n')
 
     model.eval()
@@ -206,13 +206,13 @@ for epoch in range(30):
     ks_val = ks_stat(y_val, pred_val)
 
     print(ks_val)
-    with open(f'{save_dir}/log.log', "w") as f:
+    with open(f'{save_dir}/log.log', "a") as f:
         f.write(f'{ks_val}\n')
 
     if ks_val>best:
         best = ks_val
         print('@@@@@@@@@@@@@@@@@@@@@')
-        with open(f'{save_dir}/log.log', "w") as f:
+        with open(f'{save_dir}/log.log', "a") as f:
             f.write(f'@@@@@@@@@@@@@@@@@@@@@\n')
         best_model = copy.deepcopy(model)
 
