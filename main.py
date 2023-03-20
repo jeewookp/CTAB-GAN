@@ -1,214 +1,228 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+from sklearn.metrics import roc_auc_score
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import random
+from torch import nn
+from torch.utils.data import DataLoader,TensorDataset
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import copy
+import random
 
-class Conv_Relu_Conv(torch.nn.Module):
-    def __init__(self, in_dims, hidden_dims, out_dims):
-        super(Conv_Relu_Conv,self).__init__()
-        self.fc0 = nn.Linear(in_dims,hidden_dims)
-        self.fc1 = nn.Linear(hidden_dims,out_dims)
+class SoftOrdering1DCNN(nn.Module):
 
-    def forward(self, input):
-        input = F.relu(self.fc0(input))
-        input = self.fc1(input)
-        return input
+    def __init__(self, input_dim, output_dim, sign_size=32, cha_input=16, cha_hidden=32,
+                 K=2, dropout_input=0.2, dropout_hidden=0.2, dropout_output=0.2):
+        super().__init__()
 
-def evaluate_function(x,Y,classifier):
-    output = classifier(x)
-    output = torch.exp(output)
-    output = output[:, 0] / (output[:, 0] + output[:, 1])
-    sorted_indices = torch.argsort(output)
-    sorted_labels = Y[sorted_indices]
-    n_positives = torch.cumsum(sorted_labels, dim=0)
-    n_negatives = torch.arange(1, n_positives.shape[0] + 1) - n_positives
-    cum_pos_ratio = n_positives / n_positives[-1]
-    cum_neg_ratio = n_negatives / n_negatives[-1]
-    KS = torch.max(cum_pos_ratio - cum_neg_ratio)
-    return KS.item()
+        hidden_size = sign_size * cha_input
+        sign_size1 = sign_size
+        sign_size2 = sign_size // 2
+        output_size = (sign_size // 4) * cha_hidden
+
+        self.hidden_size = hidden_size
+        self.cha_input = cha_input
+        self.cha_hidden = cha_hidden
+        self.K = K
+        self.sign_size1 = sign_size1
+        self.sign_size2 = sign_size2
+        self.output_size = output_size
+        self.dropout_input = dropout_input
+        self.dropout_hidden = dropout_hidden
+        self.dropout_output = dropout_output
+
+        self.batch_norm1 = nn.BatchNorm1d(input_dim)
+        self.dropout1 = nn.Dropout(dropout_input)
+        dense1 = nn.Linear(input_dim, hidden_size, bias=False)
+        self.dense1 = nn.utils.weight_norm(dense1)
+
+        # 1st conv layer
+        self.batch_norm_c1 = nn.BatchNorm1d(cha_input)
+        conv1 = nn.Conv1d(
+            cha_input,
+            cha_input * K,
+            kernel_size=5,
+            stride=1,
+            padding=2,
+            groups=cha_input,
+            bias=False)
+        self.conv1 = nn.utils.weight_norm(conv1, dim=None)
+
+        self.ave_po_c1 = nn.AdaptiveAvgPool1d(output_size=sign_size2)
+
+        # 2nd conv layer
+        self.batch_norm_c2 = nn.BatchNorm1d(cha_input * K)
+        self.dropout_c2 = nn.Dropout(dropout_hidden)
+        conv2 = nn.Conv1d(
+            cha_input * K,
+            cha_hidden,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False)
+        self.conv2 = nn.utils.weight_norm(conv2, dim=None)
+
+        # 3rd conv layer
+        self.batch_norm_c3 = nn.BatchNorm1d(cha_hidden)
+        self.dropout_c3 = nn.Dropout(dropout_hidden)
+        conv3 = nn.Conv1d(
+            cha_hidden,
+            cha_hidden,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False)
+        self.conv3 = nn.utils.weight_norm(conv3, dim=None)
+
+        # 4th conv layer
+        self.batch_norm_c4 = nn.BatchNorm1d(cha_hidden)
+        conv4 = nn.Conv1d(
+            cha_hidden,
+            cha_hidden,
+            kernel_size=5,
+            stride=1,
+            padding=2,
+            groups=cha_hidden,
+            bias=False)
+        self.conv4 = nn.utils.weight_norm(conv4, dim=None)
+
+        self.avg_po_c4 = nn.AvgPool1d(kernel_size=4, stride=2, padding=1)
+
+        self.flt = nn.Flatten()
+
+        self.batch_norm2 = nn.BatchNorm1d(output_size)
+        self.dropout2 = nn.Dropout(dropout_output)
+        dense2 = nn.Linear(output_size, output_dim, bias=False)
+        self.dense2 = nn.utils.weight_norm(dense2)
+
+        self.loss = nn.BCEWithLogitsLoss()
+
+    def forward(self, x):
+        x = self.batch_norm1(x)
+        x = self.dropout1(x)
+        x = nn.functional.celu(self.dense1(x))
+
+        x = x.reshape(x.shape[0], self.cha_input, self.sign_size1)
+
+        x = self.batch_norm_c1(x)
+        x = nn.functional.relu(self.conv1(x))
+
+        x = self.ave_po_c1(x)
+
+        x = self.batch_norm_c2(x)
+        x = self.dropout_c2(x)
+        x = nn.functional.relu(self.conv2(x))
+        x_s = x
+
+        x = self.batch_norm_c3(x)
+        x = self.dropout_c3(x)
+        x = nn.functional.relu(self.conv3(x))
+
+        x = self.batch_norm_c4(x)
+        x = self.conv4(x)
+        x = x + x_s
+        x = nn.functional.relu(x)
+
+        x = self.avg_po_c4(x)
+
+        x = self.flt(x)
+
+        x = self.batch_norm2(x)
+        x = self.dropout2(x)
+        x = self.dense2(x)
+
+        return x
+
+df = pd.read_csv('/Users/john/Downloads/preprocessed_df(1).zip')
+
+target_name = 'Target_HBS'
+meta_cols = ['val_gb_new', 'sil_2', 'WW', 'hf_score_final', 'num']
+
+dev_df = df[df.val_gb_new==0].reset_index(drop=True)
+val_df = df[df.val_gb_new==1].reset_index(drop=True)
+test_df = df[df.val_gb_new==2].reset_index(drop=True)
+
+x_train = dev_df.drop(meta_cols, axis=1)
+y_train = x_train.pop(target_name)
+
+x_val = val_df.drop(meta_cols, axis=1)
+y_val = x_val.pop(target_name)
+
+x_test = test_df.drop(meta_cols, axis=1)
+y_test = x_test.pop(target_name)
+
+input_features = x_train.columns
+
+train_tensor_dset = TensorDataset(torch.tensor(x_train.values, dtype=torch.float),
+    torch.tensor(y_train.values.reshape(-1,1), dtype=torch.float))
+
+valid_tensor_dset = TensorDataset(torch.tensor(x_val.values, dtype=torch.float),
+    torch.tensor(y_val.values.reshape(-1,1), dtype=torch.float))
+
+test_tensor_dset = TensorDataset(torch.tensor(x_test.values, dtype=torch.float),
+    torch.tensor(y_test.values.reshape(-1,1), dtype=torch.float))
+
+train_loader = DataLoader(train_tensor_dset, batch_size=2048, shuffle=True, num_workers=0)
+valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num_workers=0)
+
+model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=64,
+    cha_hidden=64, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2)
+
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
+scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5, min_lr=1e-5)
+criterion = nn.BCEWithLogitsLoss()
+
+best = 1e10
+for epoch in range(200):
+    for i, (X, y) in enumerate(train_loader):
+        model.train()
+        y_hat = model.forward(X)
+        loss = criterion(y_hat, y)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        if i%10==0:
+            print(epoch,i,loss.item())
+    avg_loss = 0
+    for X, y in valid_loader:
+        model.eval()
+        with torch.no_grad():
+            y_hat = model.forward(X)
+        avg_loss += criterion(y_hat, y).item()*y.shape[0]
+    avg_loss /= len(valid_tensor_dset)
+    print(avg_loss)
+    scheduler.step(avg_loss)
+    if avg_loss<best:
+        best = avg_loss
+        print('@@@@@@@@@@@@@@@@@@@@@')
+        best_model = copy.deepcopy(model)
 
 
-batch_size = 500
+with torch.no_grad():
+    pred_dev = best_model(torch.Tensor(x_train.values))
+    pred_val = best_model(torch.Tensor(x_val.values))
+    pred_test = best_model(torch.Tensor(x_test.values))
 
-df_train = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_dev.csv')
-x_train = torch.from_numpy(df_train.drop(['dev_val', 'pk','bad'], axis=1).values).to(torch.float32)
-Y_train = torch.from_numpy(pd.get_dummies(df_train.bad).values[:,0])
+pred_dev = pred_dev.squeeze(1).detach().numpy()
+pred_dev = np.exp(pred_dev)/(np.exp(pred_dev)+1)
 
-df_val = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_val.csv')
-x_val = torch.from_numpy(df_val.drop(['dev_val', 'pk','bad'], axis=1).values).to(torch.float32)
-Y_val = torch.from_numpy(pd.get_dummies(df_val.bad).values[:,0])
+pred_val = pred_val.squeeze(1).detach().numpy()
+pred_val = np.exp(pred_val)/(np.exp(pred_val)+1)
 
-val2_selected_indices = np.load('/Users/john/project/CTAB-GAN/first_data/val2_list.npy')
-val1_selected_indices = list(set(range(len(x_val)))-set(val2_selected_indices))
-x_val1 = x_val[val1_selected_indices]
-Y_val1 = Y_val[val1_selected_indices]
-x_val2 = x_val[val2_selected_indices]
-Y_val2 = Y_val[val2_selected_indices]
+pred_test = pred_test.squeeze(1).detach().numpy()
+pred_test = np.exp(pred_test)/(np.exp(pred_test)+1)
 
+from scipy.stats import ks_2samp
 
-classifier = Conv_Relu_Conv(x_train.shape[1],512,2)
-optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
-criterion = nn.CrossEntropyLoss()
+def ks_stat(y, yhat):
+    return ks_2samp(yhat[y==1], yhat[y!=1]).statistic
 
-best = 0
-for i in range(30000):
-    classifier.train()
-    samples = random.sample(range(x_train.shape[0]),batch_size)
-    x_train_unit = x_train[samples]
-    Y_train_unit = Y_train[samples]
-    output = classifier(x_train_unit)
-    loss = criterion(output,Y_train_unit)
-    classifier.zero_grad()
-    loss.backward()
-    optimizer.step()
-    if i==0:
-        avg_loss = loss.item()
-    else:
-        avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
-    if i%1000==0:
-        classifier.eval()
-        print(i, avg_loss)
+ks_dev = ks_stat(y_train, pred_dev)
+ks_val = ks_stat(y_val, pred_val)
+ks_test = ks_stat(y_test, pred_test)
 
-        KS_train = evaluate_function(x_train,Y_train,classifier)
-        KS_val1 = evaluate_function(x_val1,Y_val1,classifier)
-        KS_val2 = evaluate_function(x_val2,Y_val2,classifier)
+print(ks_dev)
+print(ks_val)
+print(ks_test)
 
-        print(KS_train, KS_val1, KS_val2)
-        if best<KS_val1:
-            classifier_save = copy.deepcopy(classifier)
-            best = KS_val1
-            print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-
-classifier = copy.deepcopy(classifier_save)
-optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
-best = 0
-for i in range(3000):
-    classifier.train()
-    samples = random.sample(range(x_val1.shape[0]),batch_size)
-    x_train_unit = x_val1[samples]
-    Y_train_unit = Y_val1[samples]
-    output = classifier(x_train_unit)
-    loss = criterion(output,Y_train_unit)
-    classifier.zero_grad()
-    loss.backward()
-    optimizer.step()
-    if i==0:
-        avg_loss = loss.item()
-    else:
-        avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
-    if i%100==0:
-        classifier.eval()
-        print(i, avg_loss)
-
-        KS_train = evaluate_function(x_train,Y_train,classifier)
-        KS_val1 = evaluate_function(x_val1,Y_val1,classifier)
-        KS_val2 = evaluate_function(x_val2,Y_val2,classifier)
-
-        print(KS_train, KS_val1, KS_val2)
-        if best<KS_val2:
-            best = KS_val2
-            print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-
-
-
-classifier = copy.deepcopy(classifier_save)
-precision_matrices = {}
-origin_params = {}
-for n, p in copy.deepcopy({n: p for n, p in classifier.named_parameters()}).items():
-    precision_matrices[n] = 0
-    origin_params[n] = p
-classifier.eval()
-for i in range((x_train.shape[0]-1)//batch_size+1):
-    x_train_unit = x_train[i*batch_size:(i+1)*batch_size]
-    Y_train_unit = Y_train[i*batch_size:(i+1)*batch_size]
-    classifier.zero_grad()
-    output = classifier(x_train_unit)
-    loss = criterion(output,Y_train_unit)
-    loss.backward()
-    for n, p in classifier.named_parameters():
-        precision_matrices[n] += p.grad.data ** 2 / ((x_train.shape[0]-1)//batch_size+1)
-
-precision_matrices = {n: p for n, p in precision_matrices.items()}
-
-
-importance = 1e5
-optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
-best = 0
-for i in range(30000):
-    classifier.train()
-    samples = random.sample(range(x_val1.shape[0]),batch_size)
-    x_train_unit = x_val1[samples]
-    Y_train_unit = Y_val1[samples]
-    output = classifier(x_train_unit)
-    loss = criterion(output,Y_train_unit)
-
-    loss_ewc = 0
-    for n, p in classifier.named_parameters():
-        _loss = precision_matrices[n] * (p - origin_params[n]) ** 2
-        loss_ewc += _loss.sum()
-
-    classifier.zero_grad()
-    (loss+importance * loss_ewc).backward()
-    optimizer.step()
-    if i==0:
-        avg_loss = loss.item()
-        avg_loss_ewc = loss_ewc.item()
-    else:
-        avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
-        avg_loss_ewc = 0.999 * avg_loss_ewc + 0.001 * loss_ewc.item()
-    if i%1000==0:
-        classifier.eval()
-        print(i, avg_loss, avg_loss_ewc)
-
-        KS_train = evaluate_function(x_train,Y_train,classifier)
-        KS_val1 = evaluate_function(x_val1,Y_val1,classifier)
-        KS_val2 = evaluate_function(x_val2,Y_val2,classifier)
-
-        print(KS_train, KS_val1, KS_val2)
-        if best<KS_val2:
-            best = KS_val2
-            print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-
-
-
-
-
-df_fake = pd.read_csv('/Users/john/project/CTAB-GAN/first_data/ML_data_fake.csv')
-x_fake = torch.from_numpy(df_fake.drop(['bad'], axis=1).values).to(torch.float32)
-Y_fake = torch.from_numpy(pd.get_dummies(df_fake.bad).values[:,0])
-x_fake_val1 = torch.cat([x_fake,x_val1],dim=0)
-Y_fake_val1 = torch.cat([Y_fake,Y_val1],dim=0)
-classifier = Conv_Relu_Conv(x_train.shape[1],512,2)
-optimizer = torch.optim.Adam(classifier.parameters(), lr=1e-5)
-best = 0
-for i in range(30000):
-    classifier.train()
-    samples = random.sample(range(x_fake_val1.shape[0]),batch_size)
-    x_train_unit = x_fake_val1[samples]
-    Y_train_unit = Y_fake_val1[samples]
-    output = classifier(x_train_unit)
-    loss = criterion(output,Y_train_unit)
-    classifier.zero_grad()
-    loss.backward()
-    optimizer.step()
-    if i==0:
-        avg_loss = loss.item()
-    else:
-        avg_loss = 0.999 * avg_loss + 0.001 * loss.item()
-    if i%1000==0:
-        classifier.eval()
-        print(i, avg_loss)
-
-        KS_train = evaluate_function(x_train,Y_train,classifier)
-        KS_val1 = evaluate_function(x_val1,Y_val1,classifier)
-        KS_val2 = evaluate_function(x_val2,Y_val2,classifier)
-
-        print(KS_train, KS_val1, KS_val2)
-        if best<KS_val2:
-            best = KS_val2
-            print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
 
