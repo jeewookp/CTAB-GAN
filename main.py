@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
@@ -7,6 +9,10 @@ from torch.utils.data import DataLoader,TensorDataset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import copy
 import random
+from scipy.stats import ks_2samp
+
+def ks_stat(y, yhat):
+    return ks_2samp(yhat[y==1], yhat[y!=1]).statistic
 
 class SoftOrdering1DCNN(nn.Module):
 
@@ -132,6 +138,10 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
+exp_name = 'test'
+save_dir = f'./result/{exp_name}'
+os.mkdir(save_dir)
+
 df = pd.read_csv('./preprocessed_df(1).zip')
 
 target_name = 'Target_HBS'
@@ -168,11 +178,11 @@ model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size
     cha_hidden=64, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2)
 
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
-scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5, min_lr=1e-5)
+scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5, min_lr=1e-5)
 criterion = nn.BCEWithLogitsLoss()
 
-best = 1e10
-for epoch in range(200):
+best = 0
+for epoch in range(30):
     for i, (X, y) in enumerate(train_loader):
         model.train()
         y_hat = model.forward(X)
@@ -182,19 +192,30 @@ for epoch in range(200):
         optimizer.step()
         if i%10==0:
             print(epoch,i,loss.item())
-    avg_loss = 0
-    for X, y in valid_loader:
-        model.eval()
-        with torch.no_grad():
-            y_hat = model.forward(X)
-        avg_loss += criterion(y_hat, y).item()*y.shape[0]
-    avg_loss /= len(valid_tensor_dset)
-    print(avg_loss)
-    scheduler.step(avg_loss)
-    if avg_loss<best:
-        best = avg_loss
+            with open(f'{save_dir}/log.log', "w") as f:
+                f.write(f'{epoch} {i} {loss.item()}\n')
+
+    model.eval()
+    with torch.no_grad():
+        pred_val = model(torch.Tensor(x_val.values))
+    pred_val = pred_val.squeeze(1).detach().numpy()
+    pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
+
+    ks_val = ks_stat(y_val, pred_val)
+
+    print(ks_val)
+    with open(f'{save_dir}/log.log', "w") as f:
+        f.write(f'{ks_val}\n')
+
+    if ks_val>best:
+        best = ks_val
         print('@@@@@@@@@@@@@@@@@@@@@')
+        with open(f'{save_dir}/log.log', "w") as f:
+            f.write(f'@@@@@@@@@@@@@@@@@@@@@\n')
         best_model = copy.deepcopy(model)
+
+    scheduler.step(ks_val)
+
 
 
 with torch.no_grad():
@@ -211,10 +232,7 @@ pred_val = np.exp(pred_val)/(np.exp(pred_val)+1)
 pred_test = pred_test.squeeze(1).detach().numpy()
 pred_test = np.exp(pred_test)/(np.exp(pred_test)+1)
 
-from scipy.stats import ks_2samp
 
-def ks_stat(y, yhat):
-    return ks_2samp(yhat[y==1], yhat[y!=1]).statistic
 
 ks_dev = ks_stat(y_train, pred_dev)
 ks_val = ks_stat(y_val, pred_val)
