@@ -37,7 +37,7 @@ class SoftOrdering1DCNN(nn.Module):
         self.dropout_hidden = dropout_hidden
         self.dropout_output = dropout_output
 
-        self.batch_norm1 = nn.BatchNorm2d(input_dim)
+        self.batch_norm1 = nn.BatchNorm1d(input_dim)
         self.dropout1 = nn.Dropout(dropout_input)
         dense1 = nn.Linear(input_dim, hidden_size, bias=False)
         self.dense1 = nn.utils.weight_norm(dense1)
@@ -104,7 +104,6 @@ class SoftOrdering1DCNN(nn.Module):
         self.loss = nn.BCEWithLogitsLoss()
 
     def forward(self, x):
-        print(x.shape)
         x = self.batch_norm1(x)
         x = self.dropout1(x)
         x = nn.functional.celu(self.dense1(x))
