@@ -104,6 +104,7 @@ class SoftOrdering1DCNN(nn.Module):
         self.loss = nn.BCEWithLogitsLoss()
 
     def forward(self, x):
+        print(x.shape)
         x = self.batch_norm1(x)
         x = self.dropout1(x)
         x = nn.functional.celu(self.dense1(x))
