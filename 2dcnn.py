@@ -96,7 +96,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         self.flt = nn.Flatten()
 
-        self.batch_norm2 = nn.BatchNorm2d(output_size)
+        self.batch_norm2 = nn.BatchNorm1d(output_size)
         self.dropout2 = nn.Dropout(dropout_output)
         dense2 = nn.Linear(output_size, output_dim, bias=False)
         self.dense2 = nn.utils.weight_norm(dense2)
