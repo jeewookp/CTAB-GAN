@@ -176,8 +176,8 @@ test_tensor_dset = TensorDataset(torch.tensor(x_test.values, dtype=torch.float),
 train_loader = DataLoader(train_tensor_dset, batch_size=2048, shuffle=True, num_workers=0)
 valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num_workers=0)
 
-model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=32,
-    cha_hidden=32, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2).cuda()
+model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=64,
+    cha_hidden=64, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2).cuda()
 
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
 scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5, min_lr=1e-5)
@@ -200,8 +200,10 @@ for epoch in range(30):
     model.eval()
     with torch.no_grad():
         input = torch.Tensor(x_val.values).cuda()
-        pred_val = model(input)
-        print(input.shape,pred_val.shape)
+        pred_val = []
+        for i in range((input.shape[0]-1)//1000+1):
+            pred_val.append(model(input)[i*1000:(i+1)*1000])
+        pred_val = torch.cat(pred_val,dim=0)
     pred_val = pred_val.squeeze(1).cpu().detach().numpy()
     pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
 
@@ -223,9 +225,23 @@ for epoch in range(30):
 
 
 with torch.no_grad():
-    pred_dev = best_model(torch.Tensor(x_train.values).cuda())
-    pred_val = best_model(torch.Tensor(x_val.values).cuda())
-    pred_test = best_model(torch.Tensor(x_test.values).cuda())
+    input = torch.Tensor(x_train.values).cuda()
+    pred_dev = []
+    for i in range((input.shape[0] - 1) // 1000 + 1):
+        pred_dev.append(model(input)[i * 1000:(i + 1) * 1000])
+    pred_dev = torch.cat(pred_dev, dim=0)
+
+    input = torch.Tensor(x_val.values).cuda()
+    pred_val = []
+    for i in range((input.shape[0] - 1) // 1000 + 1):
+        pred_val.append(model(input)[i * 1000:(i + 1) * 1000])
+    pred_val = torch.cat(pred_val, dim=0)
+
+    input = torch.Tensor(x_test.values).cuda()
+    pred_test = []
+    for i in range((input.shape[0] - 1) // 1000 + 1):
+        pred_test.append(model(input)[i * 1000:(i + 1) * 1000])
+    pred_test = torch.cat(pred_test, dim=0)
 
 pred_dev = pred_dev.squeeze(1).cpu().detach().numpy()
 pred_dev = np.exp(pred_dev)/(np.exp(pred_dev)+1)
