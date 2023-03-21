@@ -202,7 +202,7 @@ for epoch in range(30):
         input = torch.Tensor(x_val.values).cuda()
         pred_val = []
         for i in range((input.shape[0]-1)//1000+1):
-            pred_val.append(model(input)[i*1000:(i+1)*1000])
+            pred_val.append(model(input[i * 1000:(i + 1) * 1000]))
         pred_val = torch.cat(pred_val,dim=0)
     pred_val = pred_val.squeeze(1).cpu().detach().numpy()
     pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
@@ -228,19 +228,19 @@ with torch.no_grad():
     input = torch.Tensor(x_train.values).cuda()
     pred_dev = []
     for i in range((input.shape[0] - 1) // 1000 + 1):
-        pred_dev.append(model(input)[i * 1000:(i + 1) * 1000])
+        pred_dev.append(model(input[i * 1000:(i + 1) * 1000]))
     pred_dev = torch.cat(pred_dev, dim=0)
 
     input = torch.Tensor(x_val.values).cuda()
     pred_val = []
     for i in range((input.shape[0] - 1) // 1000 + 1):
-        pred_val.append(model(input)[i * 1000:(i + 1) * 1000])
+        pred_val.append(model(input[i * 1000:(i + 1) * 1000]))
     pred_val = torch.cat(pred_val, dim=0)
 
     input = torch.Tensor(x_test.values).cuda()
     pred_test = []
     for i in range((input.shape[0] - 1) // 1000 + 1):
-        pred_test.append(model(input)[i * 1000:(i + 1) * 1000])
+        pred_test.append(model(input[i * 1000:(i + 1) * 1000]))
     pred_test = torch.cat(pred_test, dim=0)
 
 pred_dev = pred_dev.squeeze(1).cpu().detach().numpy()
