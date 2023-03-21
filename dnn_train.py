@@ -139,9 +139,9 @@ for epoch in range(30):
 
 
 with torch.no_grad():
-    pred_dev = best_model(torch.Tensor(x_train.values.cuda()))
-    pred_val = best_model(torch.Tensor(x_val.values.cuda()))
-    pred_test = best_model(torch.Tensor(x_test.values.cuda()))
+    pred_dev = best_model(torch.Tensor(x_train.values).cuda())
+    pred_val = best_model(torch.Tensor(x_val.values).cuda())
+    pred_test = best_model(torch.Tensor(x_test.values).cuda())
 
 pred_dev = pred_dev.squeeze(1).cpu().detach().numpy()
 pred_dev = np.exp(pred_dev)/(np.exp(pred_dev)+1)
