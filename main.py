@@ -177,7 +177,7 @@ train_loader = DataLoader(train_tensor_dset, batch_size=2048, shuffle=True, num_
 valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num_workers=0)
 
 model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=64,
-    cha_hidden=64, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2)
+    cha_hidden=64, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2).cuda()
 
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
 scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5, min_lr=1e-5)
@@ -187,8 +187,8 @@ best = 0
 for epoch in range(30):
     for i, (X, y) in enumerate(train_loader):
         model.train()
-        y_hat = model.forward(X)
-        loss = criterion(y_hat, y)
+        y_hat = model.forward(X.cuda())
+        loss = criterion(y_hat, y.cuda())
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -199,8 +199,8 @@ for epoch in range(30):
 
     model.eval()
     with torch.no_grad():
-        pred_val = model(torch.Tensor(x_val.values))
-    pred_val = pred_val.squeeze(1).detach().numpy()
+        pred_val = model(torch.Tensor(x_val.values).cuda())
+    pred_val = pred_val.squeeze(1).cpu().detach().numpy()
     pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
 
     ks_val = ks_stat(y_val, pred_val)
@@ -221,17 +221,17 @@ for epoch in range(30):
 
 
 with torch.no_grad():
-    pred_dev = best_model(torch.Tensor(x_train.values))
-    pred_val = best_model(torch.Tensor(x_val.values))
-    pred_test = best_model(torch.Tensor(x_test.values))
+    pred_dev = best_model(torch.Tensor(x_train.values).cuda())
+    pred_val = best_model(torch.Tensor(x_val.values).cuda())
+    pred_test = best_model(torch.Tensor(x_test.values).cuda())
 
-pred_dev = pred_dev.squeeze(1).detach().numpy()
+pred_dev = pred_dev.squeeze(1).cpu().detach().numpy()
 pred_dev = np.exp(pred_dev)/(np.exp(pred_dev)+1)
 
-pred_val = pred_val.squeeze(1).detach().numpy()
+pred_val = pred_val.squeeze(1).cpu().detach().numpy()
 pred_val = np.exp(pred_val)/(np.exp(pred_val)+1)
 
-pred_test = pred_test.squeeze(1).detach().numpy()
+pred_test = pred_test.squeeze(1).cpu().detach().numpy()
 pred_test = np.exp(pred_test)/(np.exp(pred_test)+1)
 
 
@@ -246,4 +246,3 @@ print(ks_test)
 
 with open(f'{save_dir}/log.log', "a") as f:
     f.write(f'{ks_dev} {ks_val} {ks_test}\n')
-
