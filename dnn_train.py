@@ -117,7 +117,7 @@ for epoch in range(30):
 
     model.eval()
     with torch.no_grad():
-        pred_val = model(torch.Tensor(x_val.values.cuda()))
+        pred_val = model(torch.Tensor(x_val.values).cuda())
     pred_val = pred_val.squeeze(1).cpu().detach().numpy()
     pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
 
