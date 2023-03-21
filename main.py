@@ -139,7 +139,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
-exp_name = 'test'
+exp_name = '0321_1dcnn'
 save_dir = f'./result/{exp_name}'
 os.makedirs('./result',exist_ok=True)
 os.mkdir(save_dir)
@@ -244,5 +244,6 @@ print(ks_dev)
 print(ks_val)
 print(ks_test)
 
-
+with open(f'{save_dir}/log.log', "a") as f:
+    f.write(f'{ks_dev} {ks_val} {ks_test}\n')
 
