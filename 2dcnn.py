@@ -139,7 +139,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
-exp_name = '0321_2dcnn'
+exp_name = '0321_2dcnn_1chan'
 save_dir = f'./result/{exp_name}'
 os.makedirs('./result',exist_ok=True)
 os.mkdir(save_dir)
@@ -176,8 +176,8 @@ test_tensor_dset = TensorDataset(torch.tensor(x_test.values, dtype=torch.float),
 train_loader = DataLoader(train_tensor_dset, batch_size=2048, shuffle=True, num_workers=0)
 valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num_workers=0)
 
-model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=64,
-    cha_hidden=64, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2).cuda()
+model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=1,
+    cha_hidden=64, K=64, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2).cuda()
 
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
 scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5, min_lr=1e-5)
