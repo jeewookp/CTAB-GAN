@@ -17,24 +17,21 @@ def ks_stat(y, yhat):
 
 class SoftOrdering1DCNN(nn.Module):
 
-    def __init__(self, input_dim, output_dim, sign_size=32, cha_input=16, cha_hidden=32,
-                 K=2, dropout_input=0.2, dropout_hidden=0.2, dropout_output=0.2):
+    def __init__(self, input_dim, output_dim, sign_size=32, cha_input=16,
+                 dropout_input=0.2, dropout_output=0.2):
         super().__init__()
 
         hidden_size = sign_size**2 * cha_input
         sign_size1 = sign_size
         sign_size2 = sign_size // 2
-        output_size = (sign_size // 4)**2 * cha_hidden
+        output_size = 512
 
         self.hidden_size = hidden_size
         self.cha_input = cha_input
-        self.cha_hidden = cha_hidden
-        self.K = K
         self.sign_size1 = sign_size1
         self.sign_size2 = sign_size2
         self.output_size = output_size
         self.dropout_input = dropout_input
-        self.dropout_hidden = dropout_hidden
         self.dropout_output = dropout_output
 
         self.batch_norm1 = nn.BatchNorm1d(input_dim)
@@ -103,8 +100,8 @@ test_tensor_dset = TensorDataset(torch.tensor(x_test.values, dtype=torch.float),
 train_loader = DataLoader(train_tensor_dset, batch_size=2048, shuffle=True, num_workers=0)
 valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num_workers=0)
 
-model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=64,
-    cha_hidden=64, K=2, dropout_input=0.3, dropout_hidden=0.3, dropout_output=0.2).cuda()
+model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=3,
+    dropout_input=0.3, dropout_output=0.2).cuda()
 
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
 scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5, min_lr=1e-5)
