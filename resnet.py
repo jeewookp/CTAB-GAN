@@ -1,5 +1,5 @@
 import os
-
+import torchvision
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
@@ -42,59 +42,7 @@ class SoftOrdering1DCNN(nn.Module):
         dense1 = nn.Linear(input_dim, hidden_size, bias=False)
         self.dense1 = nn.utils.weight_norm(dense1)
 
-        # 1st conv layer
-        self.batch_norm_c1 = nn.BatchNorm2d(cha_input)
-        conv1 = nn.Conv2d(
-            cha_input,
-            cha_input * K,
-            kernel_size=5,
-            stride=1,
-            padding=2,
-            groups=cha_input,
-            bias=False)
-        self.conv1 = nn.utils.weight_norm(conv1, dim=None)
-
-        self.ave_po_c1 = nn.AdaptiveAvgPool2d(output_size=sign_size2)
-
-        # 2nd conv layer
-        self.batch_norm_c2 = nn.BatchNorm2d(cha_input * K)
-        self.dropout_c2 = nn.Dropout(dropout_hidden)
-        conv2 = nn.Conv2d(
-            cha_input * K,
-            cha_hidden,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False)
-        self.conv2 = nn.utils.weight_norm(conv2, dim=None)
-
-        # 3rd conv layer
-        self.batch_norm_c3 = nn.BatchNorm2d(cha_hidden)
-        self.dropout_c3 = nn.Dropout(dropout_hidden)
-        conv3 = nn.Conv2d(
-            cha_hidden,
-            cha_hidden,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False)
-        self.conv3 = nn.utils.weight_norm(conv3, dim=None)
-
-        # 4th conv layer
-        self.batch_norm_c4 = nn.BatchNorm2d(cha_hidden)
-        conv4 = nn.Conv2d(
-            cha_hidden,
-            cha_hidden,
-            kernel_size=5,
-            stride=1,
-            padding=2,
-            groups=cha_hidden,
-            bias=False)
-        self.conv4 = nn.utils.weight_norm(conv4, dim=None)
-
-        self.avg_po_c4 = nn.AvgPool2d(kernel_size=4, stride=2, padding=1)
-
-        self.flt = nn.Flatten()
+        self.resnet = torchvision.models.resnet18(pretrained=False)
 
         self.batch_norm2 = nn.BatchNorm1d(output_size)
         self.dropout2 = nn.Dropout(dropout_output)
@@ -110,28 +58,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         x = x.reshape(x.shape[0], self.cha_input, self.sign_size1, self.sign_size1)
 
-        x = self.batch_norm_c1(x)
-        x = nn.functional.relu(self.conv1(x))
-
-        x = self.ave_po_c1(x)
-
-        x = self.batch_norm_c2(x)
-        x = self.dropout_c2(x)
-        x = nn.functional.relu(self.conv2(x))
-        x_s = x
-
-        x = self.batch_norm_c3(x)
-        x = self.dropout_c3(x)
-        x = nn.functional.relu(self.conv3(x))
-
-        x = self.batch_norm_c4(x)
-        x = self.conv4(x)
-        x = x + x_s
-        x = nn.functional.relu(x)
-
-        x = self.avg_po_c4(x)
-
-        x = self.flt(x)
+        x = self.resnet(x)
 
         x = self.batch_norm2(x)
         x = self.dropout2(x)
