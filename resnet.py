@@ -23,13 +23,11 @@ class SoftOrdering1DCNN(nn.Module):
 
         hidden_size = sign_size**2 * cha_input
         sign_size1 = sign_size
-        sign_size2 = sign_size // 2
         output_size = 1000
 
         self.hidden_size = hidden_size
         self.cha_input = cha_input
         self.sign_size1 = sign_size1
-        self.sign_size2 = sign_size2
         self.output_size = output_size
         self.dropout_input = dropout_input
         self.dropout_output = dropout_output
@@ -39,7 +37,7 @@ class SoftOrdering1DCNN(nn.Module):
         dense1 = nn.Linear(input_dim, hidden_size, bias=False)
         self.dense1 = nn.utils.weight_norm(dense1)
 
-        self.resnet = torchvision.models.resnet18(pretrained=False)
+        self.resnet = torchvision.models.resnet18(pretrained=True)
 
         self.batch_norm2 = nn.BatchNorm1d(output_size)
         self.dropout2 = nn.Dropout(dropout_output)
@@ -63,7 +61,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
-exp_name = '0327_resnet'
+exp_name = '0327_resnet_pretrained'
 save_dir = f'./result/{exp_name}'
 os.makedirs('./result',exist_ok=True)
 os.mkdir(save_dir)
