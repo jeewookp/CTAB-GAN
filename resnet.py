@@ -24,7 +24,7 @@ class SoftOrdering1DCNN(nn.Module):
         hidden_size = sign_size**2 * cha_input
         sign_size1 = sign_size
         sign_size2 = sign_size // 2
-        output_size = 512
+        output_size = 1000
 
         self.hidden_size = hidden_size
         self.cha_input = cha_input
