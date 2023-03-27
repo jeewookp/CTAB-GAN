@@ -66,7 +66,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
-exp_name = '0321_2dcnn'
+exp_name = '0327_resnet'
 save_dir = f'./result/{exp_name}'
 os.makedirs('./result',exist_ok=True)
 os.mkdir(save_dir)
