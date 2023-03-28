@@ -37,7 +37,7 @@ class SoftOrdering1DCNN(nn.Module):
         dense1 = nn.Linear(input_dim, hidden_size, bias=False)
         self.dense1 = nn.utils.weight_norm(dense1)
 
-        self.resnet = torchvision.models.resnet18(pretrained=True)
+        self.resnet = torchvision.models.resnet18(pretrained=False)
 
         self.batch_norm2 = nn.BatchNorm1d(output_size)
         self.dropout2 = nn.Dropout(dropout_output)
@@ -61,7 +61,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
-exp_name = '0327_resnet_pretrained'
+exp_name = '0327_resnet'
 save_dir = f'./result/{exp_name}'
 os.makedirs('./result',exist_ok=True)
 os.mkdir(save_dir)
@@ -186,3 +186,5 @@ print(ks_test)
 
 with open(f'{save_dir}/log.log', "a") as f:
     f.write(f'{ks_dev} {ks_val} {ks_test}\n')
+
+torch.save(best_model.state_dict(),f'{save_dir}/model.pt')
