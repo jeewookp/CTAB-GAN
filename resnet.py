@@ -141,6 +141,7 @@ for epoch in range(30):
         with open(f'{save_dir}/log.log', "a") as f:
             f.write(f'@@@@@@@@@@@@@@@@@@@@@\n')
         best_model = copy.deepcopy(model)
+        torch.save(model.state_dict(), f'{save_dir}/model.pt')
 
     scheduler.step(ks_val)
 
@@ -187,4 +188,3 @@ print(ks_test)
 with open(f'{save_dir}/log.log', "a") as f:
     f.write(f'{ks_dev} {ks_val} {ks_test}\n')
 
-torch.save(best_model.state_dict(),f'{save_dir}/model.pt')
