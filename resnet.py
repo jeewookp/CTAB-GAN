@@ -37,7 +37,7 @@ class SoftOrdering1DCNN(nn.Module):
         dense1 = nn.Linear(input_dim, hidden_size, bias=False)
         self.dense1 = nn.utils.weight_norm(dense1)
 
-        self.resnet = torchvision.models.resnet18(pretrained=True)
+        self.resnet = torchvision.models.resnet18(pretrained=False)
 
         self.batch_norm2 = nn.BatchNorm1d(output_size)
         self.dropout2 = nn.Dropout(dropout_output)
@@ -61,7 +61,7 @@ class SoftOrdering1DCNN(nn.Module):
 
         return x
 
-exp_name = '0327_resnet_pretrained'
+exp_name = '0327_resnet'
 save_dir = f'./result/{exp_name}'
 os.makedirs('./result',exist_ok=True)
 os.mkdir(save_dir)
@@ -141,7 +141,7 @@ for epoch in range(30):
         with open(f'{save_dir}/log.log', "a") as f:
             f.write(f'@@@@@@@@@@@@@@@@@@@@@\n')
         best_model = copy.deepcopy(model)
-        torch.save(model.state_dict(), f'{save_dir}/model.pt')
+        torch.save(best_model.state_dict(), f'{save_dir}/model.pt')
 
     scheduler.step(ks_val)
 
@@ -151,19 +151,19 @@ with torch.no_grad():
     input = torch.Tensor(x_train.values).cuda()
     pred_dev = []
     for i in range((input.shape[0] - 1) // 1000 + 1):
-        pred_dev.append(model(input[i * 1000:(i + 1) * 1000]))
+        pred_dev.append(best_model(input[i * 1000:(i + 1) * 1000]))
     pred_dev = torch.cat(pred_dev, dim=0)
 
     input = torch.Tensor(x_val.values).cuda()
     pred_val = []
     for i in range((input.shape[0] - 1) // 1000 + 1):
-        pred_val.append(model(input[i * 1000:(i + 1) * 1000]))
+        pred_val.append(best_model(input[i * 1000:(i + 1) * 1000]))
     pred_val = torch.cat(pred_val, dim=0)
 
     input = torch.Tensor(x_test.values).cuda()
     pred_test = []
     for i in range((input.shape[0] - 1) // 1000 + 1):
-        pred_test.append(model(input[i * 1000:(i + 1) * 1000]))
+        pred_test.append(best_model(input[i * 1000:(i + 1) * 1000]))
     pred_test = torch.cat(pred_test, dim=0)
 
 pred_dev = pred_dev.squeeze(1).cpu().detach().numpy()
