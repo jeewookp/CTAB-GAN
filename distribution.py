@@ -39,7 +39,7 @@ valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num
 
 model = SoftOrdering1DCNN(input_dim=len(input_features), output_dim=1, sign_size=16, cha_input=3,
     dropout_input=0.3, dropout_output=0.2).cuda()
-model.load_state_dict(torch.load('./result/0327_resnet/model.pt'))
+model.load_state_dict(torch.load('./result/0327_resnet_pretrained/model.pt'))
 model.eval()
 
 with torch.no_grad():
@@ -72,5 +72,5 @@ pred_dev = np.exp(pred_dev) / (np.exp(pred_dev) + 1)
 pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
 pred_test = np.exp(pred_test) / (np.exp(pred_test) + 1)
 
-np.save('./result/0327_resnet/result.npy',{'pred_dev':pred_dev,'pred_val':pred_val,'pred_test':pred_test})
+np.save('./result/0327_resnet_pretrained/result.npy',{'pred_dev':pred_dev,'pred_val':pred_val,'pred_test':pred_test})
 
