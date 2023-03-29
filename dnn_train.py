@@ -51,117 +51,118 @@ class DNN(nn.Module):
         x = self.ln_out(x)
         return x
 
-exp_name = '0321_dnn'
-save_dir = f'./result/{exp_name}'
-os.makedirs('./result',exist_ok=True)
-os.mkdir(save_dir)
+if __name__=='__main__':
+    exp_name = '0321_dnn'
+    save_dir = f'./result/{exp_name}'
+    os.makedirs('./result',exist_ok=True)
+    os.mkdir(save_dir)
 
-df = pd.read_csv('./preprocessed_df(1).zip')
+    df = pd.read_csv('./preprocessed_df(1).zip')
 
-target_name = 'Target_HBS'
-meta_cols = ['val_gb_new', 'sil_2', 'WW', 'hf_score_final', 'num']
+    target_name = 'Target_HBS'
+    meta_cols = ['val_gb_new', 'sil_2', 'WW', 'hf_score_final', 'num']
 
-dev_df = df[df.val_gb_new==0].reset_index(drop=True)
-val_df = df[df.val_gb_new==1].reset_index(drop=True)
-test_df = df[df.val_gb_new==2].reset_index(drop=True)
+    dev_df = df[df.val_gb_new==0].reset_index(drop=True)
+    val_df = df[df.val_gb_new==1].reset_index(drop=True)
+    test_df = df[df.val_gb_new==2].reset_index(drop=True)
 
-x_train = dev_df.drop(meta_cols, axis=1)
-y_train = x_train.pop(target_name)
+    x_train = dev_df.drop(meta_cols, axis=1)
+    y_train = x_train.pop(target_name)
 
-x_val = val_df.drop(meta_cols, axis=1)
-y_val = x_val.pop(target_name)
+    x_val = val_df.drop(meta_cols, axis=1)
+    y_val = x_val.pop(target_name)
 
-x_test = test_df.drop(meta_cols, axis=1)
-y_test = x_test.pop(target_name)
+    x_test = test_df.drop(meta_cols, axis=1)
+    y_test = x_test.pop(target_name)
 
-input_features = x_train.columns
+    input_features = x_train.columns
 
-train_tensor_dset = TensorDataset(torch.tensor(x_train.values, dtype=torch.float),
-    torch.tensor(y_train.values.reshape(-1,1), dtype=torch.float))
+    train_tensor_dset = TensorDataset(torch.tensor(x_train.values, dtype=torch.float),
+        torch.tensor(y_train.values.reshape(-1,1), dtype=torch.float))
 
-valid_tensor_dset = TensorDataset(torch.tensor(x_val.values, dtype=torch.float),
-    torch.tensor(y_val.values.reshape(-1,1), dtype=torch.float))
+    valid_tensor_dset = TensorDataset(torch.tensor(x_val.values, dtype=torch.float),
+        torch.tensor(y_val.values.reshape(-1,1), dtype=torch.float))
 
-test_tensor_dset = TensorDataset(torch.tensor(x_test.values, dtype=torch.float),
-    torch.tensor(y_test.values.reshape(-1,1), dtype=torch.float))
+    test_tensor_dset = TensorDataset(torch.tensor(x_test.values, dtype=torch.float),
+        torch.tensor(y_test.values.reshape(-1,1), dtype=torch.float))
 
-train_loader = DataLoader(train_tensor_dset, batch_size=2048, shuffle=True, num_workers=0)
-valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_tensor_dset, batch_size=2048, shuffle=True, num_workers=0)
+    valid_loader = DataLoader(valid_tensor_dset, batch_size=2048, shuffle=False, num_workers=0)
 
-model = DNN(
-    input_dim=len(input_features),
-    output_dim=1,
-    nn_depth=3,
-    nn_width=256,
-    dropout=0.2,
-    momentum=0.1
-).cuda()
+    model = DNN(
+        input_dim=len(input_features),
+        output_dim=1,
+        nn_depth=3,
+        nn_width=256,
+        dropout=0.2,
+        momentum=0.1
+    ).cuda()
 
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
-scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5, min_lr=1e-5)
-criterion = nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
+    scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=5, min_lr=1e-5)
+    criterion = nn.BCEWithLogitsLoss()
 
-best = 0
-for epoch in range(30):
-    for i, (X, y) in enumerate(train_loader):
-        model.train()
-        y_hat = model.forward(X.cuda())
-        loss = criterion(y_hat, y.cuda())
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        if i%10==0:
-            print(epoch,i,loss.item())
-            with open(f'{save_dir}/log.log', "a") as f:
-                f.write(f'{epoch} {i} {loss.item()}\n')
+    best = 0
+    for epoch in range(30):
+        for i, (X, y) in enumerate(train_loader):
+            model.train()
+            y_hat = model.forward(X.cuda())
+            loss = criterion(y_hat, y.cuda())
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            if i%10==0:
+                print(epoch,i,loss.item())
+                with open(f'{save_dir}/log.log', "a") as f:
+                    f.write(f'{epoch} {i} {loss.item()}\n')
 
-    model.eval()
-    with torch.no_grad():
-        pred_val = model(torch.Tensor(x_val.values).cuda())
-    pred_val = pred_val.squeeze(1).cpu().detach().numpy()
-    pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
+        model.eval()
+        with torch.no_grad():
+            pred_val = model(torch.Tensor(x_val.values).cuda())
+        pred_val = pred_val.squeeze(1).cpu().detach().numpy()
+        pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
 
-    ks_val = ks_stat(y_val, pred_val)
+        ks_val = ks_stat(y_val, pred_val)
 
-    print(ks_val)
-    with open(f'{save_dir}/log.log', "a") as f:
-        f.write(f'{ks_val}\n')
-
-    if ks_val>best:
-        best = ks_val
-        print('@@@@@@@@@@@@@@@@@@@@@')
+        print(ks_val)
         with open(f'{save_dir}/log.log', "a") as f:
-            f.write(f'@@@@@@@@@@@@@@@@@@@@@\n')
-        best_model = copy.deepcopy(model)
+            f.write(f'{ks_val}\n')
 
-    scheduler.step(ks_val)
+        if ks_val>best:
+            best = ks_val
+            print('@@@@@@@@@@@@@@@@@@@@@')
+            with open(f'{save_dir}/log.log', "a") as f:
+                f.write(f'@@@@@@@@@@@@@@@@@@@@@\n')
+            best_model = copy.deepcopy(model)
 
-
-
-with torch.no_grad():
-    pred_dev = best_model(torch.Tensor(x_train.values).cuda())
-    pred_val = best_model(torch.Tensor(x_val.values).cuda())
-    pred_test = best_model(torch.Tensor(x_test.values).cuda())
-
-pred_dev = pred_dev.squeeze(1).cpu().detach().numpy()
-pred_dev = np.exp(pred_dev)/(np.exp(pred_dev)+1)
-
-pred_val = pred_val.squeeze(1).cpu().detach().numpy()
-pred_val = np.exp(pred_val)/(np.exp(pred_val)+1)
-
-pred_test = pred_test.squeeze(1).cpu().detach().numpy()
-pred_test = np.exp(pred_test)/(np.exp(pred_test)+1)
+        scheduler.step(ks_val)
 
 
 
-ks_dev = ks_stat(y_train, pred_dev)
-ks_val = ks_stat(y_val, pred_val)
-ks_test = ks_stat(y_test, pred_test)
+    with torch.no_grad():
+        pred_dev = best_model(torch.Tensor(x_train.values).cuda())
+        pred_val = best_model(torch.Tensor(x_val.values).cuda())
+        pred_test = best_model(torch.Tensor(x_test.values).cuda())
 
-print(ks_dev)
-print(ks_val)
-print(ks_test)
+    pred_dev = pred_dev.squeeze(1).cpu().detach().numpy()
+    pred_dev = np.exp(pred_dev)/(np.exp(pred_dev)+1)
 
-with open(f'{save_dir}/log.log', "a") as f:
-    f.write(f'{ks_dev} {ks_val} {ks_test}\n')
+    pred_val = pred_val.squeeze(1).cpu().detach().numpy()
+    pred_val = np.exp(pred_val)/(np.exp(pred_val)+1)
+
+    pred_test = pred_test.squeeze(1).cpu().detach().numpy()
+    pred_test = np.exp(pred_test)/(np.exp(pred_test)+1)
+
+
+
+    ks_dev = ks_stat(y_train, pred_dev)
+    ks_val = ks_stat(y_val, pred_val)
+    ks_test = ks_stat(y_test, pred_test)
+
+    print(ks_dev)
+    print(ks_val)
+    print(ks_test)
+
+    with open(f'{save_dir}/log.log', "a") as f:
+        f.write(f'{ks_dev} {ks_val} {ks_test}\n')
 
