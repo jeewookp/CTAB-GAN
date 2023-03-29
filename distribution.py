@@ -72,5 +72,5 @@ pred_dev = np.exp(pred_dev) / (np.exp(pred_dev) + 1)
 pred_val = np.exp(pred_val) / (np.exp(pred_val) + 1)
 pred_test = np.exp(pred_test) / (np.exp(pred_test) + 1)
 
-np.save('./result/0327_resnet',{'pred_dev':pred_dev,'pred_val':pred_val,'pred_test':pred_test})
+np.save('./result/0327_resnet/result.npy',{'pred_dev':pred_dev,'pred_val':pred_val,'pred_test':pred_test})
 
